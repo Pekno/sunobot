@@ -37,6 +37,11 @@ const SUNO_DATA_PATH = "./suno/data.json";
 var sunoDictionnary;
 var currentChannel;
 
+if (!fs.existsSync(SUNO_DATA_PATH)) {
+    fs.writeFileSync(SUNO_DATA_PATH, JSON.stringify({}))
+    console.log(`File '${SUNO_DATA_PATH}' created.`);
+} 
+
 audioPlayer.on(AudioPlayerStatus.Idle, () => {
     console.log("IDLE")
     console.log(audioQueue)
