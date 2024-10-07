@@ -1,7 +1,12 @@
 node_modules
 npm-debug.log
-reddit/*
-!reddit/.gitkeep
 suno/*
 !suno/.gitkeep
 .vscode
+*.env
+src
+.vscode
+.git
+.gitignore
+tsconfig.json
+suno
