@@ -7,6 +7,7 @@ import { Logger } from '../services/PinoLogger';
 import { SunoData } from '../model/SunoData';
 import { SunoProfile } from '../model/SunoProfile';
 import { SunoSession } from '../model/SunoSession';
+import { SunoPlaylist } from '../model/SunoPlaylist';
 
 export const DEFAULT_MODEL = 'chirp-v3-5';
 
@@ -377,7 +378,7 @@ export class SunoApi {
 	 * @param isPublic An boolean to change if the song is made public to.
 	 * @returns A promise that resolves to a boolean of the public status.
 	 */
-	public async setVisibility(
+	public async setClipVisibility(
 		sunoClip: SunoClip,
 		isPublic: boolean
 	): Promise<boolean> {
@@ -385,7 +386,7 @@ export class SunoApi {
 			throw new Error("Cannot change visibility of Song you don't own");
 		await this.keepAlive(false);
 		const url = `${SunoApi.BASE_URL}/api/gen/${sunoClip.id}/set_visibility/`;
-		Logger.info('SunoAPI : Set visibility : ' + url);
+		Logger.info('SunoAPI : Set Clip visibility : ' + url);
 		const response = await this.client.post(url, {
 			is_public: isPublic,
 		});
@@ -482,6 +483,136 @@ export class SunoApi {
 		}
 
 		return allClips;
+	}
+
+	public async getPlaylists(
+		namePredicate?: (playlist: SunoPlaylist) => boolean
+	): Promise<SunoPlaylist[]> {
+		const allPlaylists: SunoPlaylist[] = [];
+		const playlistsPerPage = 20; // Assuming the API returns 20 clips per page
+		let totalClips = 0;
+		let totalPages = 0;
+
+		// Fetch the first page to determine total clips and pages
+		const initialResponse = await this.client.get(
+			`${SunoApi.BASE_URL}/api/playlist/me?page=1&show_trashed=true`,
+			{
+				timeout: 3000,
+			}
+		);
+
+		const initialPlaylist = initialResponse.data.playlists.map(
+			(audio: any) => new SunoPlaylist(audio)
+		);
+		allPlaylists.push(...initialPlaylist);
+
+		totalClips = initialResponse.data.num_total_results;
+		totalPages = Math.ceil(totalClips / playlistsPerPage);
+
+		for (let currentPage = 2; currentPage <= totalPages; currentPage++) {
+			const url = `${SunoApi.BASE_URL}/api/playlist/me?page=${currentPage}&show_trashed=true`;
+			Logger.info('SunoAPI : Fetching Playlists from: ' + url);
+
+			await sleep(1); // Wait for 1 seconds before polling again
+			const response = await this.client.get(url, {
+				timeout: 3000,
+			});
+
+			const clips = response.data.playlists.map(
+				(audio: any) => new SunoPlaylist(audio)
+			);
+			allPlaylists.push(...clips);
+		}
+
+		if (namePredicate) return allPlaylists.filter((p) => namePredicate(p));
+		return allPlaylists;
+	}
+
+	public async createPlaylist(
+		playlistName: string = 'Untitled'
+	): Promise<SunoPlaylist> {
+		await this.keepAlive(false);
+		const url = `${SunoApi.BASE_URL}/api/playlist/create/`;
+		Logger.info('SunoAPI : Create Playlist : ' + url);
+		const response = await this.client.post(url, {
+			name: playlistName,
+		});
+		return response.data as SunoPlaylist;
+	}
+
+	public async trashActionPlaylist(sunoPlaylist: SunoPlaylist) {
+		await this.keepAlive(false);
+		const url = `${SunoApi.BASE_URL}/api/playlist/trash/`;
+		Logger.info(
+			`SunoAPI : ${sunoPlaylist.is_trashed ? 'Restore' : 'Trash'} Playlist : ${url}`
+		);
+		const response = await this.client.post(url, {
+			playlist_id: sunoPlaylist.id,
+			undo_trash: !sunoPlaylist.is_trashed,
+		});
+		return response.data;
+	}
+
+	public async editPlaylist(
+		sunoPlaylist: SunoPlaylist,
+		infos: { name: string; description: string; image_url: string }
+	) {
+		await this.keepAlive(false);
+		const url = `${SunoApi.BASE_URL}/api/playlist/set_metadata/`;
+		Logger.info('SunoAPI : Edit Playlist : ' + url);
+		const response = await this.client.post(url, {
+			playlist_id: sunoPlaylist.id,
+			name: infos.name,
+			description: infos.description,
+			image_url: infos.image_url,
+		});
+		return response.data;
+	}
+
+	public async setPlaylistVisibility(
+		sunoPlaylist: SunoPlaylist,
+		isPublic: boolean
+	): Promise<boolean> {
+		await this.keepAlive(false);
+		const url = `${SunoApi.BASE_URL}/api/playlist_reaction/${sunoPlaylist.id}/set_visibility/`;
+		Logger.info('SunoAPI : Set Playlist visibility : ' + url);
+		const response = await this.client.post(url, {
+			is_public: isPublic,
+		});
+
+		return response.data.is_public;
+	}
+
+	private async actionOnPlaylist(
+		action: 'add' | 'remove',
+		sunoPlaylist: SunoPlaylist,
+		sunoClips: SunoClip[]
+	) {
+		await this.keepAlive(false);
+		const url = `${SunoApi.BASE_URL}/api/playlist/update_clips/`;
+		Logger.info('SunoAPI : Add To Playlist : ' + url);
+		const response = await this.client.post(url, {
+			playlist_id: sunoPlaylist.id,
+			update_type: action,
+			metadata: {
+				clip_ids: sunoClips.map((s) => s.id),
+			},
+		});
+		return response.data;
+	}
+
+	public async addToPlaylist(
+		sunoPlaylist: SunoPlaylist,
+		sunoClips: SunoClip[]
+	) {
+		return await this.actionOnPlaylist('add', sunoPlaylist, sunoClips);
+	}
+
+	public async removeFromPlaylist(
+		sunoPlaylist: SunoPlaylist,
+		sunoClips: SunoClip[]
+	) {
+		return await this.actionOnPlaylist('remove', sunoPlaylist, sunoClips);
 	}
 
 	/**

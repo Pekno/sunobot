@@ -5,6 +5,7 @@ import { CONFIG } from '../config/config';
 import { SunoProfile } from '../model/SunoProfile';
 import { LocalAudioFileService } from './LocalAudioFileService';
 import { ApplicationCommandOptionChoiceData } from 'discord.js';
+import { SunoPlaylist } from '../model/SunoPlaylist';
 
 export class SunoService {
 	private _sunoApi: SunoApi;
@@ -17,6 +18,15 @@ export class SunoService {
 		}
 	};
 
+	private getPlaylistName = () => {
+		const today = new Date();
+		const day = String(today.getDate()).padStart(2, '0');
+		const month = String(today.getMonth() + 1).padStart(2, '0'); // Months are 0-based
+		const year = String(today.getFullYear()).slice(-2); // Get last 2 digits of the year
+
+		return `Discord SUNO - ${day}/${month}/${year}`;
+	};
+
 	generateSong = async (
 		song: SunoSong,
 		wait_audio: boolean
@@ -27,10 +37,27 @@ export class SunoService {
 			song.styles.map((x: string) => x.toLowerCase()).join(' '),
 			song.title
 		);
-		if (this._localAudioFileService)
-			for (const clip of data.clips) {
+
+		const playlistName = this.getPlaylistName();
+		const playlistsByName = await this._sunoApi.getPlaylists(
+			(playlist) => playlist.name.toLowerCase() === playlistName.toLowerCase()
+		);
+		let playlist: SunoPlaylist;
+		if (!playlistsByName.length) {
+			playlist = await this._sunoApi.createPlaylist(playlistName);
+			await this._sunoApi.setPlaylistVisibility(playlist, true);
+		} else {
+			playlist = playlistsByName[0];
+		}
+
+		if (!playlist) throw new Error('Cannot create, or find Playlist');
+		await this._sunoApi.addToPlaylist(playlist, data.clips);
+		for (const clip of data.clips) {
+			await this._sunoApi.setClipVisibility(clip, true);
+			if (this._localAudioFileService)
 				this._localAudioFileService.saveClip(clip);
-			}
+		}
+
 		return data.clips;
 	};
 
@@ -48,10 +75,6 @@ export class SunoService {
 		if (this._localAudioFileService)
 			this._localAudioFileService.saveClip(onlineClip);
 		return onlineClip;
-	};
-
-	setVisibility = async (sunoClip: SunoClip, isPublic: boolean) => {
-		return await this._sunoApi.setVisibility(sunoClip, isPublic);
 	};
 
 	profile = async (profileName: string): Promise<SunoProfile> => {

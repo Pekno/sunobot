@@ -114,7 +114,7 @@ export class OpenAIService {
 	}
 
 	generateLyricsFromPrompt = async (prompt: string): Promise<SunoSong> => {
-		Logger.debug(prompt);
+		Logger.debug(`OPEN_AI : GENERATING FROM PROMPT- ${prompt}`);
 		const completion = await this._openai.chat.completions.create({
 			model: 'gpt-4o-mini',
 			messages: [
@@ -131,6 +131,8 @@ export class OpenAIService {
 		});
 		if (!completion.choices[0].message.content)
 			throw new Error('Cannot get a song from this prompt');
-		return SunoSong.fromJSON(completion.choices[0].message.content);
+		const sunoSong = SunoSong.fromJSON(completion.choices[0].message.content);
+		Logger.debug(`OPEN_AI : GOT LYRICS - ${JSON.stringify(sunoSong, null, 2)}`);
+		return sunoSong;
 	};
 }

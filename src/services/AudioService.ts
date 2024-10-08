@@ -338,7 +338,6 @@ export class AudioService {
 
 			const sunoCLips = await this._sunoService.generateSong(lyrics, true);
 			for (const clip of sunoCLips) {
-				await this._sunoService.setVisibility(clip, true);
 				this._sunoPlayer.play(clip);
 			}
 

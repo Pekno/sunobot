@@ -172,7 +172,9 @@ export class LocalAudioFileService {
 	getProfileList = (filter?: string): SunoProfile[] => {
 		let dirList = fs.readdirSync(`${CONFIG.SAVED_DATA_PATH}`);
 		if (filter)
-			dirList = dirList.filter((profile) => profile.startsWith(filter));
+			dirList = dirList.filter((profile) =>
+				profile.startsWith(filter.toLocaleLowerCase())
+			);
 		return dirList.map(
 			(dir) =>
 				new SunoProfile(
