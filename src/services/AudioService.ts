@@ -165,7 +165,7 @@ export class AudioService {
 			const sunoId = this.extractSunoIdFromURL(sunoUrl);
 			if (!sunoId) throw new Error('No suno ID found in URL');
 
-			const sunoClip = await this._sunoService.loadSong(sunoId);
+			const sunoClip = await this._sunoService.getClip(sunoId);
 			this._sunoPlayer.play(sunoClip);
 
 			return {
@@ -235,12 +235,7 @@ export class AudioService {
 		prompt: string | null
 	) => {
 		await this.handleInteraction(interaction, async () => {
-			if (!prompt) throw new Error('No suno URL given');
-			const canGenerate = await this._sunoService.canGenerate();
-			if (!canGenerate)
-				throw new Error('No more SUNO credit to generate music');
-			// TODO : add check for OpenAI credits
-
+			if (!prompt) throw new Error('No prompt provided');
 			if (!this._openAiService) throw new Error('Open AI Service is not setup');
 			const sunoSong =
 				await this._openAiService.generateLyricsFromPrompt(prompt);
@@ -266,7 +261,7 @@ export class AudioService {
 				performedAction: true,
 				preventForceJoinVC: true,
 				message: {
-					content: `Your Lyrics for "${sunoSong.title}" is ready`,
+					content: `Your Lyrics for "${sunoSong.title}" are ready`,
 					components: [row],
 				},
 				deleteTimeout: 3600_000,
@@ -333,12 +328,12 @@ export class AudioService {
 		await this.handleInteraction(interaction, async () => {
 			const lyrics = this._lyricsMap.get(payload.lyricsId);
 			if (!lyrics) throw new Error('No Lyrics with this ID');
+			lyrics.title = `${lyrics.title} by @${interaction.user.username}`;
 			lyrics.lyrics = payload.lyrics;
 			lyrics.styles = payload.tags.split(', ');
 
 			const sunoCLips = await this._sunoService.generateSong(lyrics, true);
 			for (const clip of sunoCLips) {
-				await this._sunoService.setVisibility(clip, true);
 				this._sunoPlayer.play(clip);
 			}
 
@@ -368,7 +363,7 @@ export class AudioService {
 		const sunoProfile = await this._sunoService.profile(profileName);
 
 		let isFirst = true;
-		for (const response of sunoProfile.buildResponses()) {
+		for (const response of sunoProfile.discordResponse) {
 			if (isFirst) {
 				await interaction.editReply(response);
 			} else {

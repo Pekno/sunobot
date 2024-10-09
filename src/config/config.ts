@@ -10,4 +10,5 @@ export const CONFIG = {
 	SHOULD_SAVE_LOCALY: process.env.SHOULD_SAVE_LOCALY ?? true,
 	SAVED_DATA_PATH: process.env.SAVED_DATA_PATH ?? './suno',
 	LOG_LEVEL: process.env.LOG_LEVEL?.toLowerCase() ?? 'warning',
+	PAGE_SIZE: 25,
 };

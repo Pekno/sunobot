@@ -1,19 +1,14 @@
-import {
-	ActionRowBuilder,
-	BaseMessageOptions,
-	EmbedBuilder,
-	StringSelectMenuBuilder,
-} from 'discord.js';
 import { SunoClip } from './SunoClip';
+import { SunoPlaylist } from './SunoPlaylist';
+import { SunoClipList } from './SunoClipList';
+import { BaseMessageOptions } from 'discord.js';
 
-const max_fields_per_embed = 25;
-
-export class SunoProfile {
+export class SunoProfile extends SunoClipList {
 	user_id: string;
 	display_name: string;
 	handle: string;
 	profile_description: string;
-	clips: SunoClip[]; // Assuming you have a SunoClip type defined elsewhere
+	clips: SunoClip[];
 	stats: {
 		upvote_count__sum: number;
 		play_count__sum: number;
@@ -24,65 +19,54 @@ export class SunoProfile {
 	is_following: boolean;
 	num_total_clips: number;
 	current_page: number;
-	playlists: any[]; // You can replace `any` with a specific playlist interface if you have it
+	playlists: SunoPlaylist[];
 	avatar_image_url: string;
-	favorite_songs: any[]; // Same for favorite songs, replace `any` with a specific type if needed
+	favorite_songs: SunoClip[];
 
-	public buildResponses = (): BaseMessageOptions[] => {
-		const totalEmbed = Math.ceil(this.clips.length / max_fields_per_embed);
-		const embeds = this.buildEmbeds(totalEmbed);
-		const rows = this.buildOptionRows(totalEmbed);
-		return embeds.map((embed, index) => ({
-			embeds: [embed],
-			components: [rows[index]],
-		}));
-	};
+	get id(): string {
+		return this.user_id;
+	}
+	get upvote_count(): number {
+		return this.stats.upvote_count__sum;
+	}
+	get image_url(): string {
+		return this.avatar_image_url;
+	}
+	get num_total_results(): number {
+		return this.num_total_clips;
+	}
+	get play_count(): number {
+		return this.stats.play_count__sum;
+	}
+	get click_url(): string {
+		return `https://suno.com/@${this.handle}`;
+	}
+	get display_clips(): SunoClip[] {
+		if (!this.clips || !this.playlists) return [];
+		const playlistIds = [
+			...new Set(
+				this.playlists
+					.map((p) => p.playlist_clips.map((pc) => pc.clip.id))
+					.flat()
+			),
+		];
+		return this.clips.filter((c) => !playlistIds.includes(c.id));
+	}
+	get title(): string {
+		return this.display_name;
+	}
 
-	private buildOptionRows = (
-		totalEmbed: number
-	): ActionRowBuilder<StringSelectMenuBuilder>[] => {
-		const rows: ActionRowBuilder<StringSelectMenuBuilder>[] = [];
-		for (let currentEmbed = 0; currentEmbed < totalEmbed; currentEmbed++) {
-			const options = new StringSelectMenuBuilder()
-				.setCustomId('suno_optionselect_play')
-				.setPlaceholder('Select a song')
-				.addOptions(
-					this.clips
-						.slice(25 * currentEmbed, 25 + 25 * currentEmbed)
-						.map((c) => c.buildOptionsField())
-				);
-			rows.push(
-				new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(options)
-			);
-		}
-		return rows;
-	};
-
-	private buildEmbeds = (totalEmbed: number): EmbedBuilder[] => {
-		const embeds: EmbedBuilder[] = [];
-		for (let currentEmbed = 0; currentEmbed < totalEmbed; currentEmbed++) {
-			const embed = new EmbedBuilder();
-			embed.setDescription(`\u200B`);
-			if (currentEmbed === 0) {
-				embed
-					.setTitle(`🎤 ${this.display_name} 🎶`)
-					.setThumbnail(this.avatar_image_url)
-					.setDescription(
-						`${this.num_total_clips} 💿 | ${this.stats.play_count__sum} 👂 | ${this.stats.upvote_count__sum} 👍`
-					)
-					.setURL(`https://suno.com/@${this.handle}`);
-			}
-			embed.addFields(
-				this.clips
-					.slice(25 * currentEmbed, 25 + 25 * currentEmbed)
-					.map((c) => c.buildEmbedFieldList())
-			);
-			embeds.push(embed);
-		}
-		return embeds;
-	};
+	get discordResponse(): BaseMessageOptions[] {
+		return [
+			...super.discordResponse,
+			...this.playlists.map((p) => p.discordResponse).flat(),
+		];
+	}
 
 	public constructor(init?: Partial<SunoClip>) {
+		super();
 		Object.assign(this, init);
+
+		this.embedIcon = '🎤';
 	}
 }

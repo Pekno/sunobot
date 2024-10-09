@@ -3,6 +3,7 @@ npm-debug.log
 suno/*
 !suno/.gitkeep
 .vscode
+config/*.env
 *.env
 src
 .vscode
