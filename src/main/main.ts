@@ -19,8 +19,9 @@ import {
 import { AudioService } from '../services/AudioService';
 import { CONFIG } from '../config/config';
 import dotenv from 'dotenv';
+import path from 'path';
 
-dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, '../config/.env') });
 
 const commandsList = new CommandList();
 commandsList.push(

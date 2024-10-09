@@ -6,7 +6,6 @@ import axios from 'axios';
 import { Logger } from './PinoLogger';
 import { SunoProfile } from '../model/SunoProfile';
 import { SunoService } from './SunoService';
-
 export class LocalAudioFileService {
 	private _sunoService: SunoService;
 
