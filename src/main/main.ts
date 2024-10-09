@@ -18,6 +18,9 @@ import {
 } from 'discord.js';
 import { AudioService } from '../services/AudioService';
 import { CONFIG } from '../config/config';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const commandsList = new CommandList();
 commandsList.push(

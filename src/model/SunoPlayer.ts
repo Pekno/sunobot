@@ -31,7 +31,7 @@ export class SunoPlayer {
 		}
 
 		this._currentSunoClip = this._sunoQueue.shift();
-		this.audioPlayer.play(this._currentSunoClip.createAudioResource());
+		this.audioPlayer.play(this._currentSunoClip.audioResource);
 	};
 
 	play = (sunoClip: SunoClip) => {
@@ -94,6 +94,7 @@ export class SunoPlayer {
 	get playerText(): string {
 		switch (this.status) {
 			case AudioPlayerStatus.Buffering:
+				return `⏺ Buffering`;
 			case AudioPlayerStatus.Idle:
 				return `⏹ Stopped`;
 			case AudioPlayerStatus.AutoPaused:
@@ -108,11 +109,11 @@ export class SunoPlayer {
 		let embed: EmbedBuilder;
 		if (!this._currentSunoClip) {
 			embed = new EmbedBuilder()
-				.setTitle(`💤 No Music in Queue... 💤`)
+				.setTitle(`💤 Music Queue Done 💤`)
 				.setThumbnail(
 					'https://cdn.discordapp.com/avatars/1258764433182953514/58fa56a071f5efc68e04cd0a97ad8d32.webp?size=80'
 				)
-				.setDescription(`\n\n🔄 Waiting`)
+				.setDescription(`🔇 Playlist ended`)
 				.setURL(`https://suno.com/`);
 		} else {
 			embed = this._currentSunoClip?.buildEmbed();
@@ -210,13 +211,17 @@ export class SunoPlayer {
 
 		this._audioPlayer.on('stateChange', async (oldState, newState) => {
 			Logger.info(
-				`PLAYER : STATE CHANGE TO - ${newState.status.toUpperCase()} - ${this._currentSunoClip?.id ?? ''}`
+				`PLAYER : STATE CHANGE FROM ${oldState.status.toUpperCase()} TO ${newState.status.toUpperCase()} - ${this._currentSunoClip?.id ?? ''}`
 			);
 			switch (newState.status) {
 				case AudioPlayerStatus.Idle:
 					this.next();
 			}
 			this.updatePlayer();
+		});
+
+		this._audioPlayer.on('error', (e) => {
+			Logger.error(e);
 		});
 	}
 }

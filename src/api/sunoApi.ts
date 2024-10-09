@@ -21,7 +21,6 @@ const sleep = (x: number, y?: number): Promise<void> => {
 		const max = Math.max(x, y);
 		timeout = Math.floor(Math.random() * (max - min + 1) + min) * 1000;
 	}
-	// console.log(`Sleeping for ${timeout / 1000} seconds`);
 	Logger.info(`Sleeping for ${timeout / 1000} seconds`);
 
 	return new Promise((resolve) => setTimeout(resolve, timeout));
@@ -36,7 +35,14 @@ export class SunoApi {
 	private currentToken?: string;
 	private currentSession?: SunoSession;
 
-	constructor(cookie: string) {
+	public cookieName: string;
+	public credit_left: number;
+	public lastUsed: number;
+
+	constructor(cookie: string, cookieName: string) {
+		this.cookieName = cookieName;
+		this.credit_left = 0;
+		this.lastUsed = Date.now();
 		const cookieJar = new CookieJar();
 		const randomUserAgent = new UserAgent(/Chrome/).random().toString();
 		this.client = wrapper(
@@ -62,9 +68,11 @@ export class SunoApi {
 		await this.getAuthToken();
 		await this.keepAlive();
 		this.currentSession = await this.self();
+		this.credit_left = await (await this.get_credits()).credits_left;
 		Logger.info(
-			`SunoAPI : LOGGED IN AS "${this.currentSession.user.display_name}", PRO ACCOUNT : ${this.currentSession.roles.pro}`
+			`SunoAPI [${this.cookieName}] : LOGGED IN AS "${this.currentSession.user.display_name}", PRO ACCOUNT : ${this.currentSession.roles.pro}, REMAINING CREDITS : ${this.credit_left}`
 		);
+
 		return this;
 	}
 
@@ -97,13 +105,14 @@ export class SunoApi {
 		const renewUrl = `${SunoApi.CLERK_BASE_URL}/v1/client/sessions/${this.sid}/tokens?_clerk_js_version==4.73.4`;
 		// Renew session token
 		const renewResponse = await this.client.post(renewUrl);
-		Logger.info('SunoAPI : KEEP ALIVE...');
+		Logger.info(`SunoAPI [${this.cookieName}] : KEEP ALIVE...`);
 		if (isWait) {
 			await sleep(1, 2);
 		}
 		const newToken = renewResponse.data['jwt'];
 		// Update Authorization field in request header with the new JWT token
 		this.currentToken = newToken;
+		this.lastUsed = Date.now();
 	}
 
 	/**
@@ -132,9 +141,10 @@ export class SunoApi {
 		);
 		const costTime = Date.now() - startTime;
 		Logger.info(
-			'SunoAPI : Generate Response:\n' + JSON.stringify(audios, null, 2)
+			`SunoAPI [${this.cookieName}] : Generate Response:\n` +
+				JSON.stringify(audios, null, 2)
 		);
-		Logger.info('SunoAPI : Cost time: ' + costTime);
+		Logger.info(`SunoAPI [${this.cookieName}] : Cost time: ${costTime}`);
 		return audios;
 	}
 
@@ -191,9 +201,10 @@ export class SunoApi {
 		);
 		const costTime = Date.now() - startTime;
 		Logger.info(
-			'SunoAPI : Custom Generate Response:\n' + JSON.stringify(audios, null, 2)
+			`SunoAPI [${this.cookieName}] : Custom Generate Response:\n` +
+				JSON.stringify(audios, null, 2)
 		);
-		Logger.info('SunoAPI : Cost time: ' + costTime);
+		Logger.info(`SunoAPI [${this.cookieName}] : Cost time: ${costTime}`);
 		return audios;
 	}
 
@@ -230,6 +241,7 @@ export class SunoApi {
 		} else {
 			payload.gpt_description_prompt = prompt;
 		}
+		this.credit_left = (await (await this.get_credits()).credits_left) - 10;
 		const response = await this.client.post(
 			`${SunoApi.BASE_URL}/api/generate/v2/`,
 			payload,
@@ -238,7 +250,7 @@ export class SunoApi {
 			}
 		);
 		Logger.info(
-			'SunoAPI : GenerateSongs Response:\n' +
+			`SunoAPI [${this.cookieName}] : GenerateSongs Response:\n` +
 				JSON.stringify(response.data, null, 2)
 		);
 		if (response.status !== 200) {
@@ -336,7 +348,6 @@ export class SunoApi {
 				title: title,
 			}
 		);
-		console.log('response：\n', response);
 		return response.data;
 	}
 
@@ -351,7 +362,7 @@ export class SunoApi {
 		if (songIds) {
 			url = `${url}?ids=${songIds.join(',')}`;
 		}
-		Logger.info('SunoAPI : Get audio status: ' + url);
+		Logger.info(`SunoAPI [${this.cookieName}] : Get audio status: ` + url);
 		const response = await this.client.get(url, {
 			// 3 seconds timeout
 			timeout: 3000,
@@ -363,7 +374,7 @@ export class SunoApi {
 	public async self(): Promise<SunoSession> {
 		await this.keepAlive(false);
 		const url = `${SunoApi.BASE_URL}/api/session/`;
-		Logger.info('SunoAPI : Get Session info : ' + url);
+		Logger.info(`SunoAPI [${this.cookieName}] : Get Session info : ` + url);
 		const response = await this.client.get(url, {
 			// 3 seconds timeout
 			timeout: 3000,
@@ -386,7 +397,7 @@ export class SunoApi {
 			throw new Error("Cannot change visibility of Song you don't own");
 		await this.keepAlive(false);
 		const url = `${SunoApi.BASE_URL}/api/gen/${sunoClip.id}/set_visibility/`;
-		Logger.info('SunoAPI : Set Clip visibility : ' + url);
+		Logger.info(`SunoAPI [${this.cookieName}] : Set Clip visibility : ` + url);
 		const response = await this.client.post(url, {
 			is_public: isPublic,
 		});
@@ -406,24 +417,30 @@ export class SunoApi {
 		let totalClips = 0;
 		let totalPages = 0;
 
-		// Fetch the first page to determine total clips and pages
-		const initialResponse = await this.client.get(
-			`${SunoApi.BASE_URL}/api/profiles/${profileName}?page=1&playlists_sort_by=upvote_count&clips_sort_by=created_at`,
-			{
-				timeout: 3000,
-			}
+		const initialUrl = `${SunoApi.BASE_URL}/api/profiles/${profileName}?page=1&playlists_sort_by=upvote_count&clips_sort_by=created_at`;
+		Logger.info(
+			`SunoAPI [${this.cookieName}] : Fetching profile from: ` + initialUrl
 		);
+		// Fetch the first page to determine total clips and pages
+		const initialResponse = await this.client.get(initialUrl, {
+			timeout: 3000,
+		});
 
 		const profile = new SunoProfile(initialResponse.data);
 		profile.clips = initialResponse.data.clips.map(
 			(audio: any) => new SunoClip(audio)
+		);
+		profile.playlists = initialResponse.data.playlists.map(
+			(audio: any) => new SunoPlaylist(audio)
 		);
 		totalClips = initialResponse.data.num_total_clips;
 		totalPages = Math.ceil(totalClips / clipsPerPage);
 
 		for (let currentPage = 2; currentPage <= totalPages; currentPage++) {
 			const url = `${SunoApi.BASE_URL}/api/profiles/${profileName}?page=${currentPage}&playlists_sort_by=upvote_count&clips_sort_by=created_at`;
-			Logger.info('SunoAPI : Fetching clips from: ' + url);
+			Logger.info(
+				`SunoAPI [${this.cookieName}] : Fetching profile from: ` + url
+			);
 
 			await sleep(1); // Wait for 1 seconds before polling again
 			const response = await this.client.get(url, {
@@ -451,13 +468,14 @@ export class SunoApi {
 		let totalClips = 0;
 		let totalPages = 0;
 
-		// Fetch the first page to determine total clips and pages
-		const initialResponse = await this.client.get(
-			`${SunoApi.BASE_URL}/api/feed/v2?page=1`,
-			{
-				timeout: 3000,
-			}
+		const initialUrl = `${SunoApi.BASE_URL}/api/feed/v2?page=1`;
+		Logger.info(
+			`SunoAPI [${this.cookieName}] : Fetching clips from: ` + initialUrl
 		);
+		// Fetch the first page to determine total clips and pages
+		const initialResponse = await this.client.get(initialUrl, {
+			timeout: 3000,
+		});
 
 		const initialClips = initialResponse.data.clips.map(
 			(audio: any) => new SunoClip(audio)
@@ -469,7 +487,7 @@ export class SunoApi {
 
 		for (let currentPage = 2; currentPage <= totalPages; currentPage++) {
 			const url = `${SunoApi.BASE_URL}/api/feed/v2?page=${currentPage}`;
-			Logger.info('SunoAPI : Fetching clips from: ' + url);
+			Logger.info(`SunoAPI [${this.cookieName}] : Fetching clips from: ` + url);
 
 			await sleep(1); // Wait for 1 seconds before polling again
 			const response = await this.client.get(url, {
@@ -486,7 +504,8 @@ export class SunoApi {
 	}
 
 	public async getPlaylists(
-		namePredicate?: (playlist: SunoPlaylist) => boolean
+		namePredicate?: (playlist: SunoPlaylist) => boolean,
+		showTrashed: boolean = false
 	): Promise<SunoPlaylist[]> {
 		const allPlaylists: SunoPlaylist[] = [];
 		const playlistsPerPage = 20; // Assuming the API returns 20 clips per page
@@ -494,12 +513,13 @@ export class SunoApi {
 		let totalPages = 0;
 
 		// Fetch the first page to determine total clips and pages
-		const initialResponse = await this.client.get(
-			`${SunoApi.BASE_URL}/api/playlist/me?page=1&show_trashed=true`,
-			{
-				timeout: 3000,
-			}
+		const initialUrl = `${SunoApi.BASE_URL}/api/playlist/me?page=1&show_trashed=${showTrashed}`;
+		Logger.info(
+			`SunoAPI [${this.cookieName}] : Fetching Playlists from: ` + initialUrl
 		);
+		const initialResponse = await this.client.get(initialUrl, {
+			timeout: 3000,
+		});
 
 		const initialPlaylist = initialResponse.data.playlists.map(
 			(audio: any) => new SunoPlaylist(audio)
@@ -510,8 +530,10 @@ export class SunoApi {
 		totalPages = Math.ceil(totalClips / playlistsPerPage);
 
 		for (let currentPage = 2; currentPage <= totalPages; currentPage++) {
-			const url = `${SunoApi.BASE_URL}/api/playlist/me?page=${currentPage}&show_trashed=true`;
-			Logger.info('SunoAPI : Fetching Playlists from: ' + url);
+			const url = `${SunoApi.BASE_URL}/api/playlist/me?page=${currentPage}&show_trashed=${showTrashed}`;
+			Logger.info(
+				`SunoAPI [${this.cookieName}] : Fetching Playlists from: ` + url
+			);
 
 			await sleep(1); // Wait for 1 seconds before polling again
 			const response = await this.client.get(url, {
@@ -533,7 +555,7 @@ export class SunoApi {
 	): Promise<SunoPlaylist> {
 		await this.keepAlive(false);
 		const url = `${SunoApi.BASE_URL}/api/playlist/create/`;
-		Logger.info('SunoAPI : Create Playlist : ' + url);
+		Logger.info(`SunoAPI [${this.cookieName}] : Create Playlist : ` + url);
 		const response = await this.client.post(url, {
 			name: playlistName,
 		});
@@ -544,7 +566,7 @@ export class SunoApi {
 		await this.keepAlive(false);
 		const url = `${SunoApi.BASE_URL}/api/playlist/trash/`;
 		Logger.info(
-			`SunoAPI : ${sunoPlaylist.is_trashed ? 'Restore' : 'Trash'} Playlist : ${url}`
+			`SunoAPI [${this.cookieName}] : ${sunoPlaylist.is_trashed ? 'Restore' : 'Trash'} Playlist : ${url}`
 		);
 		const response = await this.client.post(url, {
 			playlist_id: sunoPlaylist.id,
@@ -559,7 +581,7 @@ export class SunoApi {
 	) {
 		await this.keepAlive(false);
 		const url = `${SunoApi.BASE_URL}/api/playlist/set_metadata/`;
-		Logger.info('SunoAPI : Edit Playlist : ' + url);
+		Logger.info(`SunoAPI [${this.cookieName}] : Edit Playlist : ` + url);
 		const response = await this.client.post(url, {
 			playlist_id: sunoPlaylist.id,
 			name: infos.name,
@@ -575,7 +597,9 @@ export class SunoApi {
 	): Promise<boolean> {
 		await this.keepAlive(false);
 		const url = `${SunoApi.BASE_URL}/api/playlist_reaction/${sunoPlaylist.id}/set_visibility/`;
-		Logger.info('SunoAPI : Set Playlist visibility : ' + url);
+		Logger.info(
+			`SunoAPI [${this.cookieName}] : Set Playlist visibility : ` + url
+		);
 		const response = await this.client.post(url, {
 			is_public: isPublic,
 		});
@@ -590,7 +614,10 @@ export class SunoApi {
 	) {
 		await this.keepAlive(false);
 		const url = `${SunoApi.BASE_URL}/api/playlist/update_clips/`;
-		Logger.info('SunoAPI : Add To Playlist : ' + url);
+		Logger.info(
+			`SunoAPI [${this.cookieName}] : ${action.toUpperCase()} to Playlist : ` +
+				url
+		);
 		const response = await this.client.post(url, {
 			playlist_id: sunoPlaylist.id,
 			update_type: action,
@@ -622,9 +649,9 @@ export class SunoApi {
 	 */
 	public async getClip(clipId: string): Promise<SunoClip> {
 		await this.keepAlive(false);
-		const response = await this.client.get(
-			`${SunoApi.BASE_URL}/api/clip/${clipId}`
-		);
+		const url = `${SunoApi.BASE_URL}/api/clip/${clipId}`;
+		Logger.info(`SunoAPI [${this.cookieName}] : Get Clip : ` + url);
+		const response = await this.client.get(url);
 		return new SunoClip(response.data);
 	}
 
@@ -635,9 +662,9 @@ export class SunoApi {
 		monthly_usage: number;
 	}> {
 		await this.keepAlive(false);
-		const response = await this.client.get(
-			`${SunoApi.BASE_URL}/api/billing/info/`
-		);
+		const url = `${SunoApi.BASE_URL}/api/billing/info/`;
+		Logger.info(`SunoAPI [${this.cookieName}] : Get Credit info : ` + url);
+		const response = await this.client.get(url);
 		return {
 			credits_left: response.data.total_credits_left,
 			period: response.data.period,
@@ -646,9 +673,12 @@ export class SunoApi {
 		};
 	}
 
-	public static create = async (cookie: string | undefined) => {
+	public static create = async (
+		cookie: string | undefined,
+		cookieName: string
+	) => {
 		if (!cookie) throw new Error('Environment does not contain SUNO_COOKIE.');
-		const sunoApi = new SunoApi(cookie);
+		const sunoApi = new SunoApi(cookie, cookieName);
 		return await sunoApi.init();
 	};
 }

@@ -2,6 +2,8 @@ import { AudioResource, createAudioResource } from '@discordjs/voice';
 import { APIEmbedField, APISelectMenuOption, EmbedBuilder } from 'discord.js';
 import { SunoClipMetadata } from './SunoClipMetadata';
 import { CONFIG } from '../config/config';
+import { Logger } from '../services/PinoLogger';
+import got from 'got';
 
 export class SunoClip {
 	id: string;
@@ -47,6 +49,14 @@ export class SunoClip {
 		return 'Unknown';
 	}
 
+	get tagText(): string {
+		const MAX_LENGTH = 20; // Max length before adding ellipsis
+		if (this.metadata.tags.length > MAX_LENGTH) {
+			return `${this.metadata.tags.substring(0, MAX_LENGTH)}...`;
+		}
+		return this.metadata.tags;
+	}
+
 	public constructor(init?: Partial<SunoClip>) {
 		Object.assign(this, init);
 	}
@@ -68,15 +78,16 @@ export class SunoClip {
 		return false;
 	}
 
-	public createAudioResource = (): AudioResource<null> => {
-		return createAudioResource(this.streamUrl);
-	};
+	get audioResource(): AudioResource<null> {
+		Logger.info(`CLIP : Creating Audio Source Stream from : ${this.streamUrl}`);
+		return createAudioResource(got.stream(this.streamUrl));
+	}
 
 	public buildEmbed = (): EmbedBuilder => {
 		return new EmbedBuilder()
 			.setTitle(`🎶 ${this.realTitle} 🎶`)
 			.setThumbnail(this.image_url)
-			.setDescription(`by ${this.display_name}`)
+			.setDescription(`on ${this.display_name}'s account`)
 			.setURL(this.url);
 	};
 
@@ -86,7 +97,7 @@ export class SunoClip {
 	): APIEmbedField => {
 		return {
 			name: isFirst ? '⬇️ Next on queue ⬇️' : '\u200B',
-			value: `${isPlayed ? '~~' : ''}🔹**[${this.realTitle}](${this.url})** *by ${this.display_name}* ${this.isLocal ? '📂' : '🌐'} ${isPlayed ? '~~' : ''}`,
+			value: `${isPlayed ? '~~' : ''}🔹**[${this.realTitle}](${this.url})** *on ${this.display_name}'s account* ${this.isLocal ? '📂' : '🌐'} ${isPlayed ? '~~' : ''}`,
 		};
 	};
 

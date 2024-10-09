@@ -62,10 +62,13 @@ export class Bot {
 				Logger.error(e);
 				if (e.code !== 10062) {
 					if ('deferred' in interaction && interaction.deferred) {
-						await interaction.editReply({ content: e.message });
+						await interaction.editReply({ content: `⚠️ __${e.message}__ ⚠️` });
 					} else {
 						if ('reply' in interaction)
-							await interaction.reply({ content: e.message, ephemeral: true });
+							await interaction.reply({
+								content: `⚠️ __${e.message}__ ⚠️`,
+								ephemeral: true,
+							});
 					}
 				}
 			}

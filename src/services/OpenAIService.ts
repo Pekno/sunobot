@@ -114,6 +114,7 @@ export class OpenAIService {
 	}
 
 	generateLyricsFromPrompt = async (prompt: string): Promise<SunoSong> => {
+		// TODO : add check for OpenAI credits
 		Logger.debug(`OPEN_AI : GENERATING FROM PROMPT- ${prompt}`);
 		const completion = await this._openai.chat.completions.create({
 			model: 'gpt-4o-mini',
