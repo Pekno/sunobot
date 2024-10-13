@@ -39,6 +39,11 @@ export class Bot {
 					action = interaction.customId.replace('suno_optionselect_', '');
 					payload = interaction.values[0];
 				} else if (interaction.isButton()) {
+					if (
+						interaction.customId === 'prev' ||
+						interaction.customId === 'next'
+					)
+						return;
 					[action, payload] = interaction.customId.split(';');
 				} else if (interaction.isModalSubmit()) {
 					const [command, parameters] = interaction.customId.split(';');
@@ -62,11 +67,13 @@ export class Bot {
 				Logger.error(e);
 				if (e.code !== 10062) {
 					if ('deferred' in interaction && interaction.deferred) {
-						await interaction.editReply({ content: `⚠️ __${e.message}__ ⚠️` });
+						await interaction.editReply({
+							content: `⚠️ __${e.message.substring(0, 1_500)}__ ⚠️`,
+						});
 					} else {
 						if ('reply' in interaction)
 							await interaction.reply({
-								content: `⚠️ __${e.message}__ ⚠️`,
+								content: `⚠️ __${e.message.substring(0, 1_500)}__ ⚠️`,
 								ephemeral: true,
 							});
 					}

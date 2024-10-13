@@ -19,6 +19,7 @@ export class SunoPlayer {
 	private _playerMessage: Message | null;
 	private _channel: TextChannel | null;
 	private _leaveVoiceChannel: () => void;
+	private _incrementPlayCount: (sunoClip: SunoClip) => Promise<void>;
 
 	private next = () => {
 		if (this._currentSunoClip) {
@@ -32,6 +33,10 @@ export class SunoPlayer {
 
 		this._currentSunoClip = this._sunoQueue.shift();
 		this.audioPlayer.play(this._currentSunoClip.audioResource);
+		// No need to await just to increment playcount
+		this._incrementPlayCount(this._currentSunoClip).catch((e) =>
+			Logger.error(e)
+		);
 	};
 
 	play = (sunoClip: SunoClip) => {
@@ -109,7 +114,7 @@ export class SunoPlayer {
 		let embed: EmbedBuilder;
 		if (!this._currentSunoClip) {
 			embed = new EmbedBuilder()
-				.setTitle(`💤 Music Queue Done 💤`)
+				.setTitle(`💤 Music Queue Finished 💤`)
 				.setThumbnail(
 					'https://cdn.discordapp.com/avatars/1258764433182953514/58fa56a071f5efc68e04cd0a97ad8d32.webp?size=80'
 				)
@@ -194,10 +199,14 @@ export class SunoPlayer {
 		);
 	};
 
-	constructor(leaveVoiceChannel: () => void) {
+	constructor(
+		leaveVoiceChannel: () => void,
+		incrementPlayCount: (sunoClip: SunoClip) => Promise<void>
+	) {
 		this._sunoQueue = new SunoQueue();
 		this._alreadyPlayedSunoQueue = new SunoQueue();
 		this._audioPlayer = new AudioPlayer();
+		this._incrementPlayCount = incrementPlayCount;
 		this._leaveVoiceChannel = () => {
 			leaveVoiceChannel();
 			if (!this._playerMessage) return;

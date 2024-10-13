@@ -90,17 +90,20 @@ export class LocalAudioFileService {
 		return new LocalSunoClip(JSON.parse(fs.readFileSync(foundPath, 'utf8')));
 	};
 
-	saveProfile = async (profile: string): Promise<string> => {
-		const savePath = `${CONFIG.SAVED_DATA_PATH}/${profile}`;
+	private makeprofileDir = (profileName: string): string => {
+		const savePath = `${CONFIG.SAVED_DATA_PATH}/${profileName}`;
 		if (!fs.existsSync(savePath)) {
 			Logger.info(
-				`LOCAL_AUDIO : Create Folder and Fetching Profile - ${profile}`
+				`LOCAL_AUDIO : Create Folder and Fetching Profile - ${savePath}`
 			);
 			fs.mkdirSync(savePath, { recursive: true });
 		}
-		const sunoProfile = await this._sunoService.profile(profile);
-		fs.writeFileSync(`${savePath}/profile.json`, JSON.stringify(sunoProfile));
 		return savePath;
+	};
+
+	saveProfile = (profile: SunoProfile) => {
+		const savePath = this.makeprofileDir(profile.handle);
+		fs.writeFileSync(`${savePath}/profile.json`, JSON.stringify(profile));
 	};
 
 	saveClip = async (sunoClip: SunoClip, isWait: boolean = true) => {
@@ -124,13 +127,11 @@ export class LocalAudioFileService {
 						'Content-Type': 'audio/mp3',
 					},
 				});
-
-				const savePath = await this.saveProfile(sunoClip.handle);
-
+				const savePath = this.makeprofileDir(sunoClip.handle);
 				// Save the audio and metadata files
 				fs.writeFileSync(`${savePath}/${clip.id}.mp3`, result.data);
 				fs.writeFileSync(`${savePath}/${clip.id}.json`, JSON.stringify(clip));
-				Logger.info(`LOCAL_AUDIO : ${clip.id} - Audio URL is valid, Saving`);
+				Logger.info(`LOCAL_AUDIO : ${clip.id} - Audio URL is valid, Saved`);
 				return; // Exit the function once saved successfully
 			}
 

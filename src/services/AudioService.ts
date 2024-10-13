@@ -29,6 +29,7 @@ import { v4 } from 'uuid';
 import { SunoPlayer } from '../model/SunoPlayer';
 import { SunoSong } from '../model/SunoSong';
 import { CONFIG } from '../config/config';
+import { SunoClip } from '../model/SunoClip';
 
 export class AudioService {
 	private _sunoPlayer: SunoPlayer;
@@ -39,7 +40,10 @@ export class AudioService {
 	private _audioSubscription: PlayerSubscription | undefined;
 
 	constructor() {
-		this._sunoPlayer = new SunoPlayer(this.leaveVoiceChannel);
+		this._sunoPlayer = new SunoPlayer(
+			this.leaveVoiceChannel,
+			this.incrementPlayCount
+		);
 		if (CONFIG.OPENAI_API_KEY) this._openAiService = new OpenAIService();
 		this._sunoService = new SunoService();
 		this._lyricsMap = new Map<string, SunoSong>();
@@ -115,6 +119,10 @@ export class AudioService {
 			}
 		});
 	};
+
+	private async incrementPlayCount(sunoClip: SunoClip): Promise<void> {
+		await this._sunoService.incrementPlayCount(sunoClip);
+	}
 
 	private leaveVoiceChannel = () => {
 		this._connection.destroy();
@@ -361,16 +369,7 @@ export class AudioService {
 		await interaction.deferReply({ ephemeral: true });
 		if (!profileName) throw new Error('No Suno profile name given');
 		const sunoProfile = await this._sunoService.profile(profileName);
-
-		let isFirst = true;
-		for (const response of sunoProfile.discordResponse) {
-			if (isFirst) {
-				await interaction.editReply(response);
-			} else {
-				await interaction.followUp({ ...response, ephemeral: true });
-			}
-			isFirst = false;
-		}
+		await sunoProfile.sendPaginatedDiscordResponse(interaction);
 	};
 
 	private extractSunoIdFromURL = (url: string) => {

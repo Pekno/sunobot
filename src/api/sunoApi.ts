@@ -412,48 +412,28 @@ export class SunoApi {
 	 */
 	public async profile(profileName: string): Promise<SunoProfile> {
 		await this.keepAlive(false);
+		const profiles = (
+			await this.fetchPaginatedData<SunoProfile>(
+				`${SunoApi.BASE_URL}/api/profiles/${profileName}`,
+				(data: any) => [new SunoProfile(data)],
+				'num_total_clips',
+				`playlists_sort_by=upvote_count&clips_sort_by=created_at`
+			)
+		).flat();
 
-		const clipsPerPage = 20; // Assuming the API returns 20 clips per page
-		let totalClips = 0;
-		let totalPages = 0;
+		return profiles.slice(1).reduce((acc, curr) => {
+			acc.clips.push(...curr.clips);
+			return acc;
+		}, profiles[0]);
+	}
 
-		const initialUrl = `${SunoApi.BASE_URL}/api/profiles/${profileName}?page=1&playlists_sort_by=upvote_count&clips_sort_by=created_at`;
-		Logger.info(
-			`SunoAPI [${this.cookieName}] : Fetching profile from: ` + initialUrl
-		);
-		// Fetch the first page to determine total clips and pages
-		const initialResponse = await this.client.get(initialUrl, {
-			timeout: 3000,
+	public async incrementPlayCount(sunoClip: SunoClip): Promise<void> {
+		await this.keepAlive(false);
+		const url = `${SunoApi.BASE_URL}/api/gen/${sunoClip.id}/increment_play_count/v2`;
+		Logger.info(`SunoAPI [${this.cookieName}] : Increment Clip Views : ` + url);
+		await this.client.post(url, {
+			sample_factor: 1,
 		});
-
-		const profile = new SunoProfile(initialResponse.data);
-		profile.clips = initialResponse.data.clips.map(
-			(audio: any) => new SunoClip(audio)
-		);
-		profile.playlists = initialResponse.data.playlists.map(
-			(audio: any) => new SunoPlaylist(audio)
-		);
-		totalClips = initialResponse.data.num_total_clips;
-		totalPages = Math.ceil(totalClips / clipsPerPage);
-
-		for (let currentPage = 2; currentPage <= totalPages; currentPage++) {
-			const url = `${SunoApi.BASE_URL}/api/profiles/${profileName}?page=${currentPage}&playlists_sort_by=upvote_count&clips_sort_by=created_at`;
-			Logger.info(
-				`SunoAPI [${this.cookieName}] : Fetching profile from: ` + url
-			);
-
-			await sleep(1); // Wait for 1 seconds before polling again
-			const response = await this.client.get(url, {
-				timeout: 3000,
-			});
-
-			const clips = response.data.clips.map(
-				(audio: any) => new SunoClip(audio)
-			);
-			profile.clips.push(...clips);
-		}
-
-		return profile;
 	}
 
 	/**
@@ -462,92 +442,28 @@ export class SunoApi {
 	 */
 	public async getAll(): Promise<SunoClip[]> {
 		await this.keepAlive(false);
-
-		const allClips: SunoClip[] = [];
-		const clipsPerPage = 20; // Assuming the API returns 20 clips per page
-		let totalClips = 0;
-		let totalPages = 0;
-
-		const initialUrl = `${SunoApi.BASE_URL}/api/feed/v2?page=1`;
-		Logger.info(
-			`SunoAPI [${this.cookieName}] : Fetching clips from: ` + initialUrl
+		return this.fetchPaginatedData<SunoClip>(
+			`${SunoApi.BASE_URL}/api/feed/v2`,
+			(data: any) => data.clips.map((clip: any) => new SunoClip(clip)),
+			'num_total_results'
 		);
-		// Fetch the first page to determine total clips and pages
-		const initialResponse = await this.client.get(initialUrl, {
-			timeout: 3000,
-		});
-
-		const initialClips = initialResponse.data.clips.map(
-			(audio: any) => new SunoClip(audio)
-		);
-		allClips.push(...initialClips);
-
-		totalClips = initialResponse.data.num_total_results;
-		totalPages = Math.ceil(totalClips / clipsPerPage);
-
-		for (let currentPage = 2; currentPage <= totalPages; currentPage++) {
-			const url = `${SunoApi.BASE_URL}/api/feed/v2?page=${currentPage}`;
-			Logger.info(`SunoAPI [${this.cookieName}] : Fetching clips from: ` + url);
-
-			await sleep(1); // Wait for 1 seconds before polling again
-			const response = await this.client.get(url, {
-				timeout: 3000,
-			});
-
-			const clips = response.data.clips.map(
-				(audio: any) => new SunoClip(audio)
-			);
-			allClips.push(...clips);
-		}
-
-		return allClips;
 	}
 
-	public async getPlaylists(
+	public async getSelfPlaylists(
 		namePredicate?: (playlist: SunoPlaylist) => boolean,
 		showTrashed: boolean = false
 	): Promise<SunoPlaylist[]> {
-		const allPlaylists: SunoPlaylist[] = [];
-		const playlistsPerPage = 20; // Assuming the API returns 20 clips per page
-		let totalClips = 0;
-		let totalPages = 0;
-
-		// Fetch the first page to determine total clips and pages
-		const initialUrl = `${SunoApi.BASE_URL}/api/playlist/me?page=1&show_trashed=${showTrashed}`;
-		Logger.info(
-			`SunoAPI [${this.cookieName}] : Fetching Playlists from: ` + initialUrl
+		await this.keepAlive(false);
+		const playlists = await this.fetchPaginatedData<SunoPlaylist>(
+			`${SunoApi.BASE_URL}/api/playlist/me?page=1&`,
+			(data: any) =>
+				data.playlists.map((playlist: any) => new SunoPlaylist(playlist)),
+			'num_total_results',
+			`show_trashed=${showTrashed}`
 		);
-		const initialResponse = await this.client.get(initialUrl, {
-			timeout: 3000,
-		});
 
-		const initialPlaylist = initialResponse.data.playlists.map(
-			(audio: any) => new SunoPlaylist(audio)
-		);
-		allPlaylists.push(...initialPlaylist);
-
-		totalClips = initialResponse.data.num_total_results;
-		totalPages = Math.ceil(totalClips / playlistsPerPage);
-
-		for (let currentPage = 2; currentPage <= totalPages; currentPage++) {
-			const url = `${SunoApi.BASE_URL}/api/playlist/me?page=${currentPage}&show_trashed=${showTrashed}`;
-			Logger.info(
-				`SunoAPI [${this.cookieName}] : Fetching Playlists from: ` + url
-			);
-
-			await sleep(1); // Wait for 1 seconds before polling again
-			const response = await this.client.get(url, {
-				timeout: 3000,
-			});
-
-			const clips = response.data.playlists.map(
-				(audio: any) => new SunoPlaylist(audio)
-			);
-			allPlaylists.push(...clips);
-		}
-
-		if (namePredicate) return allPlaylists.filter((p) => namePredicate(p));
-		return allPlaylists;
+		// Apply filtering if a predicate is provided
+		return namePredicate ? playlists.filter(namePredicate) : playlists;
 	}
 
 	public async createPlaylist(
@@ -681,4 +597,48 @@ export class SunoApi {
 		const sunoApi = new SunoApi(cookie, cookieName);
 		return await sunoApi.init();
 	};
+
+	private async fetchPaginatedData<T>(
+		initialUrl: string,
+		extractItems: (data: any) => T[],
+		totalItemsKey: string,
+		queryParam?: string,
+		itemsPerPage: number = 20
+	): Promise<T[]> {
+		const allItems: T[] = [];
+		let totalItems = 0;
+		let totalPages = 0;
+
+		const baseUrl = `${initialUrl}?page={X}&${queryParam}`;
+
+		// Fetch the first page to determine total items and pages
+		Logger.info(`SunoAPI [${this.cookieName}] : Fetching from: ${initialUrl}`);
+		const initialResponse = await this.client.get(
+			baseUrl.replace('{X}', `${1}`),
+			{
+				timeout: 3000,
+			}
+		);
+
+		// Extract items and total count from the first page
+		const initialData = initialResponse.data;
+		allItems.push(...extractItems(initialData));
+		totalItems = initialData[totalItemsKey];
+		totalPages = Math.ceil(totalItems / itemsPerPage);
+
+		// Fetch remaining pages
+		for (let currentPage = 2; currentPage <= totalPages; currentPage++) {
+			const url = baseUrl.replace('{X}', `${currentPage}`);
+			Logger.info(`SunoAPI [${this.cookieName}] : Fetching from: ${url}`);
+
+			await sleep(1); // Wait for 1 second before polling again
+
+			const response = await this.client.get(url, {
+				timeout: 3000,
+			});
+			allItems.push(...extractItems(response.data));
+		}
+
+		return allItems;
+	}
 }

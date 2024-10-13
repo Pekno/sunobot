@@ -1,5 +1,9 @@
 import { AudioResource, createAudioResource } from '@discordjs/voice';
-import { APIEmbedField, APISelectMenuOption, EmbedBuilder } from 'discord.js';
+import {
+	APIEmbedField,
+	EmbedBuilder,
+	StringSelectMenuOptionBuilder,
+} from 'discord.js';
 import { SunoClipMetadata } from './SunoClipMetadata';
 import { CONFIG } from '../config/config';
 import { Logger } from '../services/PinoLogger';
@@ -80,7 +84,9 @@ export class SunoClip {
 
 	get audioResource(): AudioResource<null> {
 		Logger.info(`CLIP : Creating Audio Source Stream from : ${this.streamUrl}`);
-		return createAudioResource(got.stream(this.streamUrl));
+		return createAudioResource(
+			this.isLocal ? this.streamUrl : got.stream(this.streamUrl)
+		);
 	}
 
 	public buildEmbed = (): EmbedBuilder => {
@@ -103,17 +109,19 @@ export class SunoClip {
 
 	public buildEmbedFieldList = (): APIEmbedField => {
 		return {
-			name: `${this.isLocal ? '📂' : '🌐'} ~ ${this.realTitle} ~ ${this.metadata.tags}`,
+			name: `${this.isLocal ? '📂' : '🌐'} ~ ${this.realTitle} ~ ${this.tagText}`,
 			value: `**[🔗 Link](${this.url})** - ${this.play_count} 👂 - ${this.upvote_count} 👍`,
 		};
 	};
 
-	public buildOptionsField = (): APISelectMenuOption => {
-		return {
-			label: `${this.isLocal ? '📂' : '🌐'} ~ ${this.realTitle} ~ ${this.metadata.tags}`,
-			description: `${this.play_count} 👂 - ${this.upvote_count} 👍`,
-			value: this.id,
-		};
+	public buildOptionsField = (): StringSelectMenuOptionBuilder => {
+		return new StringSelectMenuOptionBuilder()
+			.setLabel(
+				`${this.isLocal ? '📂' : '🌐'} ~ ${this.realTitle} ~ ${this.tagText}`
+			)
+			.setDescription(`${this.play_count} 👂 - ${this.upvote_count} 👍`)
+			.setValue(this.id)
+			.setEmoji(this.isLocal ? '📂' : '🌐');
 	};
 }
 

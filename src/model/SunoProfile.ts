@@ -1,7 +1,7 @@
 import { SunoClip } from './SunoClip';
 import { SunoPlaylist } from './SunoPlaylist';
 import { SunoClipList } from './SunoClipList';
-import { BaseMessageOptions } from 'discord.js';
+import { CommandInteraction } from 'discord.js';
 
 export class SunoProfile extends SunoClipList {
 	user_id: string;
@@ -56,16 +56,24 @@ export class SunoProfile extends SunoClipList {
 		return this.display_name;
 	}
 
-	get discordResponse(): BaseMessageOptions[] {
-		return [
-			...super.discordResponse,
-			...this.playlists.map((p) => p.discordResponse).flat(),
-		];
-	}
+	sendPaginatedDiscordResponse = async (
+		interaction: CommandInteraction
+	): Promise<void> => {
+		await super.sendPaginatedDiscordResponse(interaction);
+		for (const playlist of this.playlists) {
+			await playlist.sendPaginatedDiscordResponse(interaction);
+		}
+	};
 
-	public constructor(init?: Partial<SunoClip>) {
+	public constructor(init?: Partial<SunoProfile>) {
 		super();
 		Object.assign(this, init);
+
+		if (init?.clips) this.clips = this.clips.map((clip) => new SunoClip(clip));
+		if (init?.playlists)
+			this.playlists = this.playlists.map(
+				(playlist) => new SunoPlaylist(playlist)
+			);
 
 		this.embedIcon = '🎤';
 	}

@@ -1,11 +1,6 @@
-import {
-	ActionRowBuilder,
-	BaseMessageOptions,
-	EmbedBuilder,
-	StringSelectMenuBuilder,
-} from 'discord.js';
+import { CommandInteraction, EmbedBuilder } from 'discord.js';
 import { SunoClip } from './SunoClip';
-import { CONFIG } from '../config/config';
+import { PaginatedEmbed } from './PaginatedEmbed';
 
 export abstract class SunoClipList {
 	abstract get id(): string;
@@ -19,49 +14,20 @@ export abstract class SunoClipList {
 
 	embedIcon: string;
 
-	get maxPage(): number {
-		return Math.ceil(this.display_clips.length / CONFIG.PAGE_SIZE);
+	public async sendPaginatedDiscordResponse(
+		interaction: CommandInteraction
+	): Promise<void> {
+		const paginatedResponse = new PaginatedEmbed(this);
+		await paginatedResponse.send(interaction);
 	}
 
-	private getClipPerPage = (pageNumber: number): SunoClip[] => {
-		return this.display_clips.slice(
-			CONFIG.PAGE_SIZE * pageNumber,
-			CONFIG.PAGE_SIZE + CONFIG.PAGE_SIZE * pageNumber
-		);
+	buildBaseEmbed = (): EmbedBuilder => {
+		return new EmbedBuilder()
+			.setTitle(`${this.embedIcon} ${this.title}`)
+			.setDescription(
+				`${this.num_total_results} 💿 | ${this.play_count} 👂 | ${this.upvote_count} 👍`
+			)
+			.setThumbnail(this.image_url)
+			.setURL(this.click_url);
 	};
-
-	get discordResponse(): BaseMessageOptions[] {
-		const responses: BaseMessageOptions[] = [];
-		for (let currentPage = 0; currentPage < this.maxPage; currentPage++) {
-			const currentClips = this.getClipPerPage(currentPage);
-
-			const embed = new EmbedBuilder();
-			embed.setDescription(`\u200B`);
-			if (currentPage === 0) {
-				embed
-					.setTitle(`${this.embedIcon} ${this.title}`)
-					.setDescription(
-						`${this.num_total_results} 💿 | ${this.play_count} 👂 | ${this.upvote_count} 👍`
-					)
-					.setThumbnail(this.image_url)
-					.setURL(this.click_url);
-			}
-			embed.addFields(currentClips.map((sc) => sc.buildEmbedFieldList()));
-
-			const options = new StringSelectMenuBuilder()
-				.setCustomId('suno_optionselect_play')
-				.setPlaceholder('Select a song')
-				.addOptions(currentClips.map((c) => c.buildOptionsField()));
-			const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-				options
-			);
-
-			responses.push({
-				embeds: [embed],
-				components: [row],
-			});
-		}
-
-		return responses;
-	}
 }

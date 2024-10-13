@@ -74,6 +74,10 @@ export class SunoService {
 		}
 	};
 
+	incrementPlayCount = async (sunoClip: SunoClip): Promise<void> => {
+		await this.getSunoApi().incrementPlayCount(sunoClip);
+	};
+
 	generateSong = async (
 		song: SunoSong,
 		wait_audio: boolean
@@ -89,7 +93,7 @@ export class SunoService {
 		);
 
 		const playlistName = this.getPlaylistName();
-		const playlistsByName = await sunoApi.getPlaylists(
+		const playlistsByName = await sunoApi.getSelfPlaylists(
 			(playlist) => playlist.name.toLowerCase() === playlistName.toLowerCase()
 		);
 		let playlist: SunoPlaylist;
@@ -126,8 +130,10 @@ export class SunoService {
 		const profile = await this.getSunoApi().profile(
 			profileName.trim().toLowerCase()
 		);
-		if (this._localAudioFileService)
+		if (this._localAudioFileService) {
 			await this._localAudioFileService.expandProfile(profile);
+			this._localAudioFileService.saveProfile(profile);
+		}
 		return profile;
 	};
 
