@@ -1,0 +1,64 @@
+{
+    "error": {
+        "suno": {
+            "no_cookie": "Le SUNO_COOKIE_X n'est pas défini. Veuillez vous assurer que vos paramètres de cookie sont correctement configurés.",
+            "cant_generate": "Actuellement, il n'y a pas d'instances SunoApi disponibles pour générer de la musique. Veuillez réessayer plus tard.",
+            "cant_from_cookie": "Impossible de localiser une instance SunoApi en utilisant des cookies. Veuillez vérifier vos paramètres de cookie.",
+            "cant_from_id": "Aucune instance SunoApi trouvée avec l'ID spécifié. Veuillez vérifier l'ID et réessayer.",
+            "cant_create_nor_find_playlist": "Impossible de créer ou de trouver la playlist spécifiée. Veuillez vérifier les détails de votre playlist.",
+            "expired_session": "Votre ID de session a expiré. Vous devrez peut-être mettre à jour le SUNO_COOKIE pour établir une nouvelle session.",
+            "no_session": "L'ID de session n'est pas défini. Impossible de renouveler votre jeton. Veuillez initier une nouvelle session.",
+            "something_wrong": "Un problème inattendu s'est produit lors du processus de génération de musique. Veuillez réessayer.",
+            "no_right": "Vous n'avez pas la permission de changer le {{right}} de la chanson car elle ne vous appartient pas."
+        },
+        "openai": {
+            "cant_find_lang": "La langue correcte pour OpenAI n'a pas pu être trouvée. Veuillez vous assurer que vos paramètres sont corrects.",
+            "cant_get_song": "Impossible de récupérer une chanson basée sur l'invite fournie. Veuillez vérifier votre saisie et réessayer."
+        },
+        "local_audio": {
+            "too_much_retries": "Après {{retries}} tentatives, l'URL audio fournie n'est toujours pas un mp3 valide. Veuillez vérifier l'URL."
+        },
+        "discord": {
+            "no_command_name": "Aucun nom de commande n'a été fourni. Veuillez spécifier une commande.",
+            "command_not_found": "La commande demandée n'a pas pu être trouvée. Veuillez vous assurer que le nom de la commande est correct.",
+            "no_configured_command": "Aucune commande Discord n'est configurée. Veuillez configurer au moins une commande.",
+            "no_discord_token": "Le token Discord n'est pas configuré. Veuillez configurer le token de votre bot Discord.",
+            "no_discord_id": "L'ID Discord n'est pas configuré. Veuillez fournir un ID Discord valide.",
+            "no_interaction": "L'interaction spécifiée n'a pas pu être trouvée. Veuillez vous assurer qu'elle est valide.",
+            "no_guild_id": "La commande n'a pas été envoyée depuis un serveur. Veuillez vous assurer que vous êtes dans un serveur Discord."
+        },
+        "audio": {
+            "no_lyrics": "Aucune parole trouvée pour l'ID spécifié. Veuillez vérifier l'ID et réessayer.",
+            "no_openai": "Le service OpenAI n'est pas configuré correctement. Veuillez vérifier votre configuration.",
+            "missing_field_prompt": "Une invite est requise mais n'a pas été fournie. Veuillez inclure une invite.",
+            "missing_field_profile": "Aucun nom de profil Suno n'a été fourni. Veuillez spécifier un nom de profil.",
+            "missing_channelId": "L'ID de canal n'a pas pu être trouvé. Veuillez vérifier vos paramètres de canal.",
+            "missing_guildId": "L'ID du serveur Discord est manquant. Veuillez fournir l'ID correct du serveur.",
+            "missing_userId": "L'ID utilisateur n'a pas pu être trouvé. Veuillez vous assurer que l'utilisateur existe.",
+            "missing_voice_channelId": "Impossible de trouver un canal vocal à rejoindre. Veuillez vous assurer que vous êtes dans un canal vocal.",
+            "no_suno_url": "Aucune URL Suno n'a été fournie. Veuillez inclure une URL Suno valide.",
+            "no_suno_id": "Aucun ID Suno n'a été trouvé dans l'URL fournie. Veuillez vérifier l'URL."
+        },
+        "_default": "Erreur : {{message}}"
+    },
+    "display": {
+        "clip": {
+            "_default": {
+                "description": "sur le compte de {{account_name}}",
+                "next_in_queue": "Prochain dans la file d'attente"
+            }
+        },
+        "player": {
+            "_default": {
+                "header": "File d'attente terminée",
+                "description": "La playlist est terminée"
+            },
+            "status": {
+                "buffering": "Mise en mémoire tampon",
+                "stopped": "Arrêté",
+                "paused": "Pause",
+                "playing": "Lecture"
+            }
+        }
+    }
+}

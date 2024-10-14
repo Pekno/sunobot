@@ -45,8 +45,6 @@ export class PaginatedEmbed<T extends SunoClipList> {
 	}
 
 	public async send(mainInteraction: CommandInteraction) {
-		if (!mainInteraction) throw new Error('Interaction is undefined');
-
 		const response: BaseMessageOptions = {
 			embeds: [this.embeds[this.currentPage]],
 			components: this.getActionRow(),
@@ -113,12 +111,13 @@ export class PaginatedEmbed<T extends SunoClipList> {
 					)
 				)
 			);
-			rows.push(
-				new ActionRowBuilder<
-					ButtonBuilder | StringSelectMenuBuilder
-				>().addComponents(this.createSelectMenu())
-			);
 		}
+		rows.push(
+			new ActionRowBuilder<
+				ButtonBuilder | StringSelectMenuBuilder
+			>().addComponents(this.createSelectMenu())
+		);
+
 		return rows;
 	}
 

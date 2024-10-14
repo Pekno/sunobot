@@ -21,6 +21,7 @@
     "dotenv": "^16.4.5",
     "fs": "^0.0.1-security",
     "got": "^11.8.2",
+    "i18n": "^0.15.1",
     "libsodium-wrappers": "^0.7.15",
     "openai": "^4.65.0",
     "pino": "^9.3.1",
@@ -33,6 +34,7 @@
   "devDependencies": {
     "@eslint/js": "^9.11.1",
     "@types/eslint__js": "^8.42.3",
+    "@types/i18n": "^0.13.12",
     "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^8.7.0",
     "@typescript-eslint/parser": "^8.7.0",

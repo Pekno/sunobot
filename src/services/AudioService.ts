@@ -30,6 +30,7 @@ import { SunoPlayer } from '../model/SunoPlayer';
 import { SunoSong } from '../model/SunoSong';
 import { CONFIG } from '../config/config';
 import { SunoClip } from '../model/SunoClip';
+import { LocaleError } from '../model/LocalError';
 
 export class AudioService {
 	private _sunoPlayer: SunoPlayer;
@@ -40,13 +41,13 @@ export class AudioService {
 	private _audioSubscription: PlayerSubscription | undefined;
 
 	constructor() {
+		if (CONFIG.OPENAI_API_KEY) this._openAiService = new OpenAIService();
+		this._sunoService = new SunoService();
+		this._lyricsMap = new Map<string, SunoSong>();
 		this._sunoPlayer = new SunoPlayer(
 			this.leaveVoiceChannel,
 			this.incrementPlayCount
 		);
-		if (CONFIG.OPENAI_API_KEY) this._openAiService = new OpenAIService();
-		this._sunoService = new SunoService();
-		this._lyricsMap = new Map<string, SunoSong>();
 	}
 
 	public start = async () => {
@@ -56,15 +57,17 @@ export class AudioService {
 	private joinVoiceChannel = async (interaction: CommandInteraction) => {
 		const { channelId, guildId, guild, member } = interaction;
 
-		if (!channelId) throw new Error('Cannot find channelId');
-		if (!guildId || !guild) throw new Error('Cannot find guildId');
+		if (!channelId) throw new LocaleError('error.audio.missing_channelId');
+		if (!guildId || !guild)
+			throw new LocaleError('error.audio.missing_guildId');
 
 		const userId = member?.user?.id;
-		if (!userId) throw new Error('Cannot find userId');
+		if (!userId) throw new LocaleError('error.audio.missing_userId');
 
 		const guildMember = await guild.members.fetch(userId);
 		const voiceChannelId = guildMember.voice?.channelId;
-		if (!voiceChannelId) throw new Error('Cannot find voiceChannelId');
+		if (!voiceChannelId)
+			throw new LocaleError('error.audio.missing_voice_channelId');
 
 		await this._sunoPlayer.bindToChannel(
 			(await interaction.channel?.client.channels.fetch(
@@ -120,9 +123,9 @@ export class AudioService {
 		});
 	};
 
-	private async incrementPlayCount(sunoClip: SunoClip): Promise<void> {
+	private incrementPlayCount = async (sunoClip: SunoClip): Promise<void> => {
 		await this._sunoService.incrementPlayCount(sunoClip);
-	}
+	};
 
 	private leaveVoiceChannel = () => {
 		this._connection.destroy();
@@ -169,9 +172,9 @@ export class AudioService {
 
 	play = async (interaction: CommandInteraction, sunoUrl: string | null) => {
 		await this.handleInteraction(interaction, async () => {
-			if (!sunoUrl) throw new Error('No suno URL given');
+			if (!sunoUrl) throw new LocaleError('error.audio.no_suno_url');
 			const sunoId = this.extractSunoIdFromURL(sunoUrl);
-			if (!sunoId) throw new Error('No suno ID found in URL');
+			if (!sunoId) throw new LocaleError('error.audio.no_suno_id');
 
 			const sunoClip = await this._sunoService.getClip(sunoId);
 			this._sunoPlayer.play(sunoClip);
@@ -243,8 +246,8 @@ export class AudioService {
 		prompt: string | null
 	) => {
 		await this.handleInteraction(interaction, async () => {
-			if (!prompt) throw new Error('No prompt provided');
-			if (!this._openAiService) throw new Error('Open AI Service is not setup');
+			if (!prompt) throw new LocaleError('error.audio.missing_field_prompt');
+			if (!this._openAiService) throw new LocaleError('error.audio.no_openai');
 			const sunoSong =
 				await this._openAiService.generateLyricsFromPrompt(prompt);
 
@@ -283,7 +286,7 @@ export class AudioService {
 	abortLyrics = async (interaction: ButtonInteraction, lyricsId: string) => {
 		await interaction.deferReply({ ephemeral: true });
 		const lyrics = this._lyricsMap.get(lyricsId);
-		if (!lyrics) throw new Error('No Lyrics with this ID');
+		if (!lyrics) throw new LocaleError('error.audio.no_lyrics');
 		await interaction.editReply({
 			content: `Aborted lyrics from "${lyrics.title}"`,
 		});
@@ -292,7 +295,7 @@ export class AudioService {
 
 	reviewLyrics = async (interaction: ButtonInteraction, lyricsId: string) => {
 		const lyrics = this._lyricsMap.get(lyricsId);
-		if (!lyrics) throw new Error('No Lyrics with this ID');
+		if (!lyrics) throw new LocaleError('error.audio.no_lyrics');
 		const modal = new ModalBuilder()
 			.setCustomId(`prompt_modal;${lyricsId}`)
 			.setTitle(`${lyrics.title}`);
@@ -335,7 +338,7 @@ export class AudioService {
 	) => {
 		await this.handleInteraction(interaction, async () => {
 			const lyrics = this._lyricsMap.get(payload.lyricsId);
-			if (!lyrics) throw new Error('No Lyrics with this ID');
+			if (!lyrics) throw new LocaleError('error.audio.no_lyrics');
 			lyrics.title = `${lyrics.title} by @${interaction.user.username}`;
 			lyrics.lyrics = payload.lyrics;
 			lyrics.styles = payload.tags.split(', ');
@@ -367,7 +370,8 @@ export class AudioService {
 		profileName: string | null
 	) => {
 		await interaction.deferReply({ ephemeral: true });
-		if (!profileName) throw new Error('No Suno profile name given');
+		if (!profileName)
+			throw new LocaleError('error.audio.missing_field_profile');
 		const sunoProfile = await this._sunoService.profile(profileName);
 		await sunoProfile.sendPaginatedDiscordResponse(interaction);
 	};

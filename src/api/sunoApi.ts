@@ -8,6 +8,7 @@ import { SunoData } from '../model/SunoData';
 import { SunoProfile } from '../model/SunoProfile';
 import { SunoSession } from '../model/SunoSession';
 import { SunoPlaylist } from '../model/SunoPlaylist';
+import { LocaleError } from '../model/LocalError';
 
 export const DEFAULT_MODEL = 'chirp-v3-5';
 
@@ -85,9 +86,7 @@ export class SunoApi {
 		// Get session ID
 		const sessionResponse = await this.client.get(getSessionUrl);
 		if (!sessionResponse?.data?.response?.['last_active_session_id']) {
-			throw new Error(
-				'Failed to get session id, you may need to update the SUNO_COOKIE'
-			);
+			throw new LocaleError('error.suno.expired_session');
 		}
 		// Save session ID for later use
 		this.sid = sessionResponse.data.response['last_active_session_id'];
@@ -99,7 +98,7 @@ export class SunoApi {
 	 */
 	public async keepAlive(isWait?: boolean): Promise<void> {
 		if (!this.sid) {
-			throw new Error('Session ID is not set. Cannot renew token.');
+			throw new LocaleError('error.suno.no_session');
 		}
 		// URL to renew session token
 		const renewUrl = `${SunoApi.CLERK_BASE_URL}/v1/client/sessions/${this.sid}/tokens?_clerk_js_version==4.73.4`;
@@ -166,7 +165,7 @@ export class SunoApi {
 			}
 		);
 		if (response.status !== 200) {
-			throw new Error('Error response:' + response.statusText);
+			throw new LocaleError('error._default', { message: response.statusText });
 		}
 		return response.data;
 	}
@@ -254,7 +253,7 @@ export class SunoApi {
 				JSON.stringify(response.data, null, 2)
 		);
 		if (response.status !== 200) {
-			throw new Error('Error response:' + response.statusText);
+			throw new LocaleError('error._default', { message: response.statusText });
 		}
 		const sunoData = response.data as SunoData;
 		const songIds = sunoData.clips.map((audio: SunoClip) => audio.id);
@@ -266,7 +265,7 @@ export class SunoApi {
 			while (Date.now() - startTime < 100000) {
 				const response = await this.get(songIds);
 				if (response.every((audio) => audio.status === 'error')) {
-					throw new Error('Something went wrong on the music generation');
+					throw new LocaleError('error.suno.something_wrong');
 				}
 				if (
 					response.every(
@@ -394,7 +393,9 @@ export class SunoApi {
 		isPublic: boolean
 	): Promise<boolean> {
 		if (this.currentSession?.user.id !== sunoClip.user_id)
-			throw new Error("Cannot change visibility of Song you don't own");
+			throw new LocaleError('error.suno.no_right', {
+				right: 'visibility',
+			});
 		await this.keepAlive(false);
 		const url = `${SunoApi.BASE_URL}/api/gen/${sunoClip.id}/set_visibility/`;
 		Logger.info(`SunoAPI [${this.cookieName}] : Set Clip visibility : ` + url);
@@ -593,7 +594,7 @@ export class SunoApi {
 		cookie: string | undefined,
 		cookieName: string
 	) => {
-		if (!cookie) throw new Error('Environment does not contain SUNO_COOKIE.');
+		if (!cookie) throw new LocaleError('error.suno.no_cookie');
 		const sunoApi = new SunoApi(cookie, cookieName);
 		return await sunoApi.init();
 	};

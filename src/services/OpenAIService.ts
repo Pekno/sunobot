@@ -2,6 +2,7 @@ import OpenAI from 'openai';
 import { SunoSong } from '../model/SunoSong';
 import { Logger } from './PinoLogger';
 import { CONFIG } from '../config/config';
+import { LocaleError } from '../model/LocalError';
 
 const getLang = (lang: string): string => {
 	switch (lang.toUpperCase()) {
@@ -108,9 +109,8 @@ export class OpenAIService {
 
 	constructor() {
 		this._openai = new OpenAI();
-		if (!CONFIG.OPENAI_LANG)
-			throw new Error('Cannot find correct language for Open AI');
-		this._lang = getLang(CONFIG.OPENAI_LANG);
+		if (!CONFIG.LOCALE) throw new LocaleError('error.openai.cant_find_lang');
+		this._lang = getLang(CONFIG.LOCALE);
 	}
 
 	generateLyricsFromPrompt = async (prompt: string): Promise<SunoSong> => {
@@ -131,7 +131,7 @@ export class OpenAIService {
 			response_format: SunoSong.getGPTObject(),
 		});
 		if (!completion.choices[0].message.content)
-			throw new Error('Cannot get a song from this prompt');
+			throw new LocaleError('error.openai.cant_get_song');
 		const sunoSong = SunoSong.fromJSON(completion.choices[0].message.content);
 		Logger.debug(`OPEN_AI : GOT LYRICS - ${JSON.stringify(sunoSong, null, 2)}`);
 		return sunoSong;

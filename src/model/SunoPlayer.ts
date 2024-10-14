@@ -10,6 +10,7 @@ import {
 	Message,
 	TextChannel,
 } from 'discord.js';
+import i18n from 'i18n';
 
 export class SunoPlayer {
 	private _alreadyPlayedSunoQueue: SunoQueue;
@@ -99,14 +100,14 @@ export class SunoPlayer {
 	get playerText(): string {
 		switch (this.status) {
 			case AudioPlayerStatus.Buffering:
-				return `⏺ Buffering`;
+				return `⏺ ${i18n.__('display.player.status.buffering')}`;
 			case AudioPlayerStatus.Idle:
-				return `⏹ Stopped`;
+				return `⏹ ${i18n.__('display.player.status.stopped')}`;
 			case AudioPlayerStatus.AutoPaused:
 			case AudioPlayerStatus.Paused:
-				return `⏸ Paused`;
+				return `⏸ ${i18n.__('display.player.status.paused')}`;
 			case AudioPlayerStatus.Playing:
-				return `▶️ Playing `;
+				return `▶️ ${i18n.__('display.player.status.playing')} `;
 		}
 	}
 
@@ -114,11 +115,11 @@ export class SunoPlayer {
 		let embed: EmbedBuilder;
 		if (!this._currentSunoClip) {
 			embed = new EmbedBuilder()
-				.setTitle(`💤 Music Queue Finished 💤`)
+				.setTitle(`💤 ${i18n.__('display.player._default.header')} 💤`)
 				.setThumbnail(
 					'https://cdn.discordapp.com/avatars/1258764433182953514/58fa56a071f5efc68e04cd0a97ad8d32.webp?size=80'
 				)
-				.setDescription(`🔇 Playlist ended`)
+				.setDescription(`🔇 ${i18n.__('display.player._default.description')}`)
 				.setURL(`https://suno.com/`);
 		} else {
 			embed = this._currentSunoClip?.buildEmbed();

@@ -3,6 +3,7 @@ import { Logger } from './PinoLogger';
 import { CONFIG } from '../config/config';
 import { CommandList } from '../model/DiscordModels';
 import { AudioService } from './AudioService';
+import { LocaleError } from '../model/LocalError';
 
 export class Bot {
 	private _client: Client;
@@ -13,8 +14,10 @@ export class Bot {
 			intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates],
 		});
 
-		if (!CONFIG.DISCORD_TOKEN) throw new Error('No Discord token configured');
-		if (!CONFIG.DISCORD_ID) throw new Error('No Discord id configured');
+		if (!CONFIG.DISCORD_TOKEN)
+			throw new LocaleError('error.discord.no_discord_token');
+		if (!CONFIG.DISCORD_ID)
+			throw new LocaleError('error.discord.no_discord_id');
 
 		const rest = new REST({ version: '10' }).setToken(CONFIG.DISCORD_TOKEN);
 		try {
@@ -27,9 +30,9 @@ export class Bot {
 		}
 
 		this._client.on(Events.InteractionCreate, async (interaction) => {
-			if (!interaction) throw new Error('Cannot find interaction');
+			if (!interaction) throw new LocaleError('error.discord.no_interaction');
 			if (!interaction.guildId)
-				throw new Error('Command was not sent from a server');
+				throw new LocaleError('error.discord.no_guild_id');
 			try {
 				let action;
 				let payload;
@@ -85,7 +88,8 @@ export class Bot {
 	};
 
 	start = async (commandList: CommandList) => {
-		if (!commandList) throw new Error('No Discord commands configured');
+		if (!commandList)
+			throw new LocaleError('error.discord.no_configured_command');
 		await this.register(commandList);
 		await this._audioService.start();
 	};

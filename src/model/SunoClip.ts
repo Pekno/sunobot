@@ -8,6 +8,7 @@ import { SunoClipMetadata } from './SunoClipMetadata';
 import { CONFIG } from '../config/config';
 import { Logger } from '../services/PinoLogger';
 import got from 'got';
+import i18n from 'i18n';
 
 export class SunoClip {
 	id: string;
@@ -93,7 +94,9 @@ export class SunoClip {
 		return new EmbedBuilder()
 			.setTitle(`🎶 ${this.realTitle} 🎶`)
 			.setThumbnail(this.image_url)
-			.setDescription(`on ${this.display_name}'s account`)
+			.setDescription(
+				`${i18n.__('display.clip._default.description', { account_name: this.display_name })}`
+			)
 			.setURL(this.url);
 	};
 
@@ -102,8 +105,10 @@ export class SunoClip {
 		isPlayed: boolean
 	): APIEmbedField => {
 		return {
-			name: isFirst ? '⬇️ Next on queue ⬇️' : '\u200B',
-			value: `${isPlayed ? '~~' : ''}🔹**[${this.realTitle}](${this.url})** *on ${this.display_name}'s account* ${this.isLocal ? '📂' : '🌐'} ${isPlayed ? '~~' : ''}`,
+			name: isFirst
+				? `⬇️ ${i18n.__('display.clip._default.next_in_queue')} ⬇️`
+				: '\u200B',
+			value: `${isPlayed ? '~~' : ''}🔹**[${this.realTitle}](${this.url})** *${i18n.__('display.clip._default.description', { account_name: this.display_name })}* ${this.isLocal ? '📂' : '🌐'} ${isPlayed ? '~~' : ''}`,
 		};
 	};
 

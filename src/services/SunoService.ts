@@ -6,6 +6,7 @@ import { SunoProfile } from '../model/SunoProfile';
 import { LocalAudioFileService } from './LocalAudioFileService';
 import { ApplicationCommandOptionChoiceData } from 'discord.js';
 import { SunoPlaylist } from '../model/SunoPlaylist';
+import { LocaleError } from '../model/LocalError';
 
 const COOKIE_PREFIX = 'SUNO_COOKIE_';
 
@@ -28,7 +29,8 @@ export class SunoService {
 				}
 			}
 		}
-		if (this._sunoApis.size === 0) throw new Error('No SUNO_COOKIE_X defined');
+		if (this._sunoApis.size === 0)
+			throw new LocaleError('error.suno.no_cookie');
 
 		if (CONFIG.SHOULD_SAVE_LOCALY) {
 			this._localAudioFileService = new LocalAudioFileService(this);
@@ -47,7 +49,7 @@ export class SunoService {
 	getSunoApi(needsCredits: boolean = false): SunoApi {
 		const oldestApi = this.findOldestUsedApi(needsCredits);
 		if (oldestApi) return oldestApi;
-		throw new Error('No available SunoApi can generate at this time');
+		throw new LocaleError('error.suno.cant_generate');
 	}
 
 	private findOldestUsedApi = (needsCredits: boolean): SunoApi => {
@@ -65,11 +67,11 @@ export class SunoService {
 		}
 		if (!oldestCookieName) {
 			const defaultValue = this._sunoApis.entries().next().value;
-			if (!defaultValue) throw new Error('Cannot find a SunoApi from cookies');
+			if (!defaultValue) throw new LocaleError('error.suno.cant_from_cookie');
 			return defaultValue[1];
 		} else {
 			const oldestApi = this._sunoApis.get(oldestCookieName);
-			if (!oldestApi) throw new Error('Cannot find a SunoApi with this ID');
+			if (!oldestApi) throw new LocaleError('error.suno.cant_from_id');
 			return oldestApi;
 		}
 	};
@@ -104,7 +106,8 @@ export class SunoService {
 			playlist = playlistsByName[0];
 		}
 
-		if (!playlist) throw new Error('Cannot create, or find Playlist');
+		if (!playlist)
+			throw new LocaleError('error.suno.cant_create_nor_find_playlist');
 		await sunoApi.addToPlaylist(playlist, data.clips);
 		for (const clip of data.clips) {
 			await sunoApi.setClipVisibility(clip, true);

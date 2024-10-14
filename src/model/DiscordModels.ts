@@ -11,6 +11,7 @@ import {
 	ModalSubmitInteraction,
 } from 'discord.js';
 import { AudioService } from '../services/AudioService';
+import { LocaleError } from './LocalError';
 
 export type AnyCommandInteraction =
 	| ChatInputCommandInteraction<CacheType>
@@ -36,13 +37,13 @@ export class CommandList {
 	): Promise<void> => {
 		const cmdName =
 			commandName ?? (interaction as CommandInteraction).commandName;
-		if (!cmdName) throw new Error('No command name given');
+		if (!cmdName) throw new LocaleError('error.discord.no_command_name');
 		// Try to get alias
 		const alias = this._alias.get(cmdName);
 		// If no command found, try with alias
 		const command =
 			this._commands.get(cmdName) ?? (alias ? this._commands.get(alias) : null);
-		if (!command) throw new Error('Command not found');
+		if (!command) throw new LocaleError('error.discord.command_not_found');
 
 		return command.execute(interaction, client, audioService, byPassParameters);
 	};

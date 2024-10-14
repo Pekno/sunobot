@@ -1,0 +1,64 @@
+{
+    "error": {
+        "suno": {
+            "no_cookie": "The SUNO_COOKIE_X is not defined. Please ensure that your cookie settings are correctly configured.",
+            "cant_generate": "Currently, there are no available SunoApi instances that can generate music. Please try again later.",
+            "cant_from_cookie": "Unable to locate a SunoApi instance using cookies. Please check your cookie settings.",
+            "cant_from_id": "No SunoApi instance found with the specified ID. Please verify the ID and try again.",
+            "cant_create_nor_find_playlist": "Unable to create or find the specified playlist. Please check your playlist details.",
+            "expired_session": "Your session ID has expired. You may need to update the SUNO_COOKIE to establish a new session.",
+            "no_session": "Session ID is not set. Unable to renew your token. Please initiate a new session.",
+            "something_wrong": "An unexpected issue occurred during the music generation process. Please try again.",
+            "no_right": "You do not have permission to change the {{right}} of the song because it is not owned by you."
+        },
+        "openai": {
+            "cant_find_lang": "The correct language for OpenAI could not be found. Please ensure your settings are correct.",
+            "cant_get_song": "Unable to retrieve a song based on the provided prompt. Please check your input and try again."
+        },
+        "local_audio": {
+            "too_much_retries": "After {{retries}} attempts, the provided audio URL is still not a valid mp3. Please verify the URL."
+        },
+        "discord": {
+            "no_command_name": "No command name was provided. Please specify a command.",
+            "command_not_found": "The requested command could not be found. Please ensure the command name is correct.",
+            "no_configured_command": "There are no Discord commands configured. Please configure at least one command.",
+            "no_discord_token": "The Discord token is not configured. Please set up your Discord bot token.",
+            "no_discord_id": "The Discord ID is not configured. Please provide a valid Discord ID.",
+            "no_interaction": "The specified interaction could not be found. Please ensure it is valid.",
+            "no_guild_id": "The command was not sent from a server. Please ensure you are in a Discord server."
+        },
+        "audio": {
+            "no_lyrics": "No lyrics found for the specified ID. Please verify the ID and try again.",
+            "no_openai": "The OpenAI Service is not set up correctly. Please check your configuration.",
+            "missing_field_prompt": "A prompt is required but was not provided. Please include a prompt.",
+            "missing_field_profile": "No Suno profile name has been provided. Please specify a profile name.",
+            "missing_channelId": "The channel ID could not be found. Please verify your channel settings.",
+            "missing_guildId": "The Discord server ID is missing. Please provide the correct server ID.",
+            "missing_userId": "The user ID could not be found. Please ensure the user exists.",
+            "missing_voice_channelId": "Unable to find a voice channel to join. Please ensure you are in a voice channel.",
+            "no_suno_url": "No Suno URL has been provided. Please include a valid Suno URL.",
+            "no_suno_id": "No Suno ID was found in the provided URL. Please check the URL."
+        },
+        "_default": "Error : {{message}}"
+    },
+    "display": {
+        "clip": {
+            "_default": {
+                "description": "on {{account_name}}'s account",
+                "next_in_queue": "Next in queue"
+            }
+        },
+        "player": {
+            "_default": {
+                "header": "Music Queue Finished",
+                "description": "Playlist ended"
+            },
+            "status": {
+                "buffering" : "Buffering",
+                "stopped": "Stopped",
+                "paused": "Paused",
+                "playing": "Playing"
+            }
+        }
+    }
+}

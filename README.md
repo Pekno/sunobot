@@ -32,6 +32,7 @@ SUNO Discord Bot is a versatile music bot designed to play SUNO music directly i
 To configure the SUNO Discord Bot, you need to set the following environment variables:
 
 - **Required:**
+  - `LOCALE`: The [ISO 639 language](https://en.wikipedia.org/wiki/List_of_ISO_639_language_codes#:~:text=ISO%20639%20is%20a%20standardized,(sets%202%E2%80%935).) code of bot default language.
   - `DISCORD_ID`: Your Discord bot ID.
   - `DISCORD_TOKEN`: Your Discord bot token.
   - `SUNO_COOKIE_[value]`[^1]: A Suno Cookie [Check here to see how to retrieve it](https://github.com/gcui-art/suno-api). 
@@ -41,7 +42,6 @@ To configure the SUNO Discord Bot, you need to set the following environment var
 
 - **Optional:**
   - `OPENAI_API_KEY`: API key from Open AI, required if you want the bot to generate lyrics and songs.
-  - `OPENAI_LANG`: The [ISO 639 language](https://en.wikipedia.org/wiki/List_of_ISO_639_language_codes#:~:text=ISO%20639%20is%20a%20standardized,(sets%202%E2%80%935).) code of the lyrics language. *MANDATORY IF `OPENAI_API_KEY` IS `True`*
   - `OPENAI_PROMPT`: Prompt to generate the lyrics, use `${lang}` as a variable to add the selected language from `OPENAI_API_KEY`.
   - `SHOULD_SAVE_LOCALY`: Defines if SUNO musics should be saved localy or only remain on the web.
   - `SAVED_DATA_PATH`: Defines the path where all suno data will be stored on the server. Default is `./suno`. *UNUSED IF `SHOULD_SAVE_LOCALY` IS `False`*

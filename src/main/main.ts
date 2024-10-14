@@ -20,7 +20,21 @@ import { AudioService } from '../services/AudioService';
 import { CONFIG } from '../config/config';
 import dotenv from 'dotenv';
 import path from 'path';
+import i18n from 'i18n';
+import { LocaleError } from '../model/LocalError';
 
+i18n.configure({
+	locales: CONFIG.AVAILABLE_LOCAL,
+	directory: path.resolve(__dirname, '../locales'),
+	defaultLocale: 'en',
+	objectNotation: true,
+});
+if (!CONFIG.AVAILABLE_LOCAL.includes(CONFIG.LOCALE.toLowerCase()))
+	throw new LocaleError('error._default', {
+		message: `LOCALE env var not recognized`,
+	});
+i18n.setLocale(CONFIG.LOCALE.toLowerCase());
+Logger.info(`LOCALE : ${CONFIG.LOCALE.toUpperCase()}`);
 dotenv.config({ path: path.resolve(__dirname, '../config/.env') });
 
 const commandsList = new CommandList();

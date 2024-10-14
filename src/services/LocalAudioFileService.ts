@@ -6,6 +6,7 @@ import axios from 'axios';
 import { Logger } from './PinoLogger';
 import { SunoProfile } from '../model/SunoProfile';
 import { SunoService } from './SunoService';
+import { LocaleError } from '../model/LocalError';
 export class LocalAudioFileService {
 	private _sunoService: SunoService;
 
@@ -156,9 +157,9 @@ export class LocalAudioFileService {
 
 			// If max retries are reached, throw an error
 			if (retries >= MAX_RETRIES) {
-				throw new Error(
-					`Audio URL is not a valid mp3 after ${MAX_RETRIES} retries.`
-				);
+				throw new LocaleError(`error.local_audio.too_much_retries`, {
+					retries: `${MAX_RETRIES}`,
+				});
 			}
 		};
 
