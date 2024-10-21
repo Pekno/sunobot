@@ -38,7 +38,7 @@ To configure the SUNO Discord Bot, you need to set the following environment var
   - `SUNO_COOKIE_[value]`[^1]: A Suno Cookie [Check here to see how to retrieve it](https://github.com/gcui-art/suno-api). 
 > [!TIP]
 > You can add multiple `SUNO_COOKIE_[value]`, juste replace the `[value]`. One of them will be picked to call the api or generate songs.
-> If you got an issue because of the length of the cookie, you can use it in ./config/.env
+> If you got an issue because of the length of the cookie, you can use it in ./env/.env
 
 - **Optional:**
   - `OPENAI_API_KEY`: API key from Open AI, required if you want the bot to generate lyrics and songs.

@@ -1,6 +1,6 @@
 import { AudioPlayer, AudioPlayerStatus } from '@discordjs/voice';
 import { SunoQueue } from './SunoQueue';
-import { Logger } from '../services/PinoLogger';
+import { Logger } from '../services/LoggerService';
 import { SunoClip } from './SunoClip';
 import {
 	ActionRowBuilder,

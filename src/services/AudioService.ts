@@ -24,7 +24,7 @@ import {
 	VoiceConnectionStatus,
 	PlayerSubscription,
 } from '@discordjs/voice';
-import { Logger } from './PinoLogger';
+import { Logger } from './LoggerService';
 import { v4 } from 'uuid';
 import { SunoPlayer } from '../model/SunoPlayer';
 import { SunoSong } from '../model/SunoSong';

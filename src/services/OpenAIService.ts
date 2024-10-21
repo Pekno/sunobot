@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import { SunoSong } from '../model/SunoSong';
-import { Logger } from './PinoLogger';
+import { Logger } from './LoggerService';
 import { CONFIG } from '../config/config';
 import { LocaleError } from '../model/LocalError';
 

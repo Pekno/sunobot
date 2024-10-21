@@ -1,13 +1,13 @@
 node_modules
 npm-debug.log
 suno/*
-!suno/.gitkeep
 .vscode
-config/*.env
-*.env
+**/env/*
 src
+.env
 .vscode
 .git
 .gitignore
+.gitkeep
 tsconfig.json
 suno

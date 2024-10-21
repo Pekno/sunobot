@@ -1,5 +1,5 @@
 import { Client, Events, GatewayIntentBits, REST, Routes } from 'discord.js';
-import { Logger } from './PinoLogger';
+import { Logger } from './LoggerService';
 import { CONFIG } from '../config/config';
 import { CommandList } from '../model/DiscordModels';
 import { AudioService } from './AudioService';

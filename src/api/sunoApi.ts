@@ -3,7 +3,7 @@ import UserAgent from 'user-agents';
 import { wrapper } from 'axios-cookiejar-support';
 import { CookieJar } from 'tough-cookie';
 import { SunoClip } from '../model/SunoClip';
-import { Logger } from '../services/PinoLogger';
+import { Logger } from '../services/LoggerService';
 import { SunoData } from '../model/SunoData';
 import { SunoProfile } from '../model/SunoProfile';
 import { SunoSession } from '../model/SunoSession';

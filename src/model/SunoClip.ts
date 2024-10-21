@@ -6,7 +6,7 @@ import {
 } from 'discord.js';
 import { SunoClipMetadata } from './SunoClipMetadata';
 import { CONFIG } from '../config/config';
-import { Logger } from '../services/PinoLogger';
+import { Logger } from '../services/LoggerService';
 import got from 'got';
 import i18n from 'i18n';
 

@@ -1,4 +1,4 @@
-import { Logger } from '../services/PinoLogger';
+import { Logger } from '../services/LoggerService';
 import { Bot } from '../services/Bot';
 import {
 	AutoCompleteCommand,
@@ -35,7 +35,7 @@ if (!CONFIG.AVAILABLE_LOCAL.includes(CONFIG.LOCALE.toLowerCase()))
 	});
 i18n.setLocale(CONFIG.LOCALE.toLowerCase());
 Logger.info(`LOCALE : ${CONFIG.LOCALE.toUpperCase()}`);
-dotenv.config({ path: path.resolve(__dirname, '../config/.env') });
+dotenv.config({ path: path.resolve(__dirname, '../env/.env') });
 
 const commandsList = new CommandList();
 commandsList.push(

@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { LocalSunoClip, SunoClip } from '../model/SunoClip';
 import axios from 'axios';
-import { Logger } from './PinoLogger';
+import { Logger } from './LoggerService';
 import { SunoProfile } from '../model/SunoProfile';
 import { SunoService } from './SunoService';
 import { LocaleError } from '../model/LocalError';
