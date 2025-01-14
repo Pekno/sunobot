@@ -9,7 +9,8 @@
             "expired_session": "Votre ID de session a expiré. Vous devrez peut-être mettre à jour le SUNO_COOKIE pour établir une nouvelle session.",
             "no_session": "L'ID de session n'est pas défini. Impossible de renouveler votre jeton. Veuillez initier une nouvelle session.",
             "something_wrong": "Un problème inattendu s'est produit lors du processus de génération de musique. Veuillez réessayer.",
-            "no_right": "Vous n'avez pas la permission de changer le {{right}} de la chanson car elle ne vous appartient pas."
+            "no_right": "Vous n'avez pas la permission de changer le {{right}} de la chanson car elle ne vous appartient pas.",
+            "clerk_version": "Impossible d'obtenir la version de 'clerkjs', merci de ressayer plus tard"
         },
         "openai": {
             "cant_find_lang": "La langue correcte pour OpenAI n'a pas pu être trouvée. Veuillez vous assurer que vos paramètres sont corrects.",

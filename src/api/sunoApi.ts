@@ -28,8 +28,9 @@ const sleep = (x: number, y?: number): Promise<void> => {
 };
 
 export class SunoApi {
-	private static BASE_URL: string = 'https://studio-api.suno.ai';
+	private static BASE_URL: string = 'https://studio-api.prod.suno.com';
 	private static CLERK_BASE_URL: string = 'https://clerk.suno.com';
+	private static JSDELIVR_BASE_URL: string = 'https://data.jsdelivr.com';
 
 	private readonly client: AxiosInstance;
 	private sid?: string;
@@ -39,6 +40,7 @@ export class SunoApi {
 	public cookieName: string;
 	public credit_left: number;
 	public lastUsed: number;
+	private clerkVersion?: string;
 
 	constructor(cookie: string, cookieName: string) {
 		this.cookieName = cookieName;
@@ -66,6 +68,7 @@ export class SunoApi {
 	}
 
 	public async init(): Promise<SunoApi> {
+		await this.getClerkLatestVersion();
 		await this.getAuthToken();
 		await this.keepAlive();
 		this.currentSession = await this.self();
@@ -78,11 +81,28 @@ export class SunoApi {
 	}
 
 	/**
+	 * Get the clerk package latest version id.
+	 */
+	private async getClerkLatestVersion() {
+		// URL to get clerk version ID
+		const getClerkVersionUrl = `${SunoApi.JSDELIVR_BASE_URL}/v1/package/npm/@clerk/clerk-js`;
+		// Get clerk version ID
+		const versionListResponse = await this.client.get(getClerkVersionUrl);
+		if (!versionListResponse?.data?.['tags']['latest']) {
+			throw new LocaleError('error.suno.clerk_version');
+		}
+		// Save clerk version ID for auth
+		//this.clerkVersion = versionListResponse?.data?.['tags']['latest'];
+		// Use a Clerk version released before fraud detection was implemented
+		this.clerkVersion = '5.34.0';
+	}
+
+	/**
 	 * Get the session ID and save it for later use.
 	 */
 	private async getAuthToken() {
 		// URL to get session ID
-		const getSessionUrl = `${SunoApi.CLERK_BASE_URL}/v1/client?_clerk_js_version=4.73.4`;
+		const getSessionUrl = `${SunoApi.CLERK_BASE_URL}/v1/client?_clerk_js_version=${this.clerkVersion}`;
 		// Get session ID
 		const sessionResponse = await this.client.get(getSessionUrl);
 		if (!sessionResponse?.data?.response?.['last_active_session_id']) {
@@ -225,17 +245,22 @@ export class SunoApi {
 		title?: string,
 		make_instrumental?: boolean,
 		model?: string,
-		wait_audio: boolean = false
+		wait_audio: boolean = false,
+		negative_tags?: string
 	): Promise<SunoData> {
 		await this.keepAlive(false);
 		const payload: any = {
 			make_instrumental: make_instrumental == true,
-			mv: model || this.currentSession?.models[0].external_key || DEFAULT_MODEL,
+			mv:
+				model ||
+				/*this.currentSession?.models[0].external_key ||*/ DEFAULT_MODEL,
 			prompt: '',
+			generation_type: 'TEXT',
 		};
 		if (isCustom) {
 			payload.tags = tags;
 			payload.title = title;
+			payload.negative_tags = negative_tags;
 			payload.prompt = prompt;
 		} else {
 			payload.gpt_description_prompt = prompt;

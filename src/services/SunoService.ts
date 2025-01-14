@@ -110,9 +110,15 @@ export class SunoService {
 			throw new LocaleError('error.suno.cant_create_nor_find_playlist');
 		await sunoApi.addToPlaylist(playlist, data.clips);
 		for (const clip of data.clips) {
-			await sunoApi.setClipVisibility(clip, true);
-			if (this._localAudioFileService)
+			try {
+				await sunoApi.setClipVisibility(clip, true);
+			} catch (_) {
+				continue; // Skip to the next iteration
+			}
+
+			if (this._localAudioFileService) {
 				this._localAudioFileService.saveClip(clip);
+			}
 		}
 
 		return data.clips;

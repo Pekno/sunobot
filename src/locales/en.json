@@ -9,7 +9,8 @@
             "expired_session": "Your session ID has expired. You may need to update the SUNO_COOKIE to establish a new session.",
             "no_session": "Session ID is not set. Unable to renew your token. Please initiate a new session.",
             "something_wrong": "An unexpected issue occurred during the music generation process. Please try again.",
-            "no_right": "You do not have permission to change the {{right}} of the song because it is not owned by you."
+            "no_right": "You do not have permission to change the {{right}} of the song because it is not owned by you.",
+            "clerk_version": "Failed to get clerk version info, Please try again later"
         },
         "openai": {
             "cant_find_lang": "The correct language for OpenAI could not be found. Please ensure your settings are correct.",

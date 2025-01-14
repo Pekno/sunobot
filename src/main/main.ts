@@ -234,5 +234,5 @@ commandsList.push(
 
 const bot = new Bot();
 bot.start(commandsList).catch((e) => {
-	Logger.error(e);
+	Logger.error(e.message);
 });
