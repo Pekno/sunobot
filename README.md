@@ -1,4 +1,4 @@
-# SUNO Discord Bot
+# ![Logo](logo.png) SUNO Discord Bot
 
 ## Description
 
