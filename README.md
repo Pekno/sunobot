@@ -7,6 +7,7 @@
 [![Docker pulls](https://img.shields.io/docker/pulls/pekno/sunobot)](https://hub.docker.com/r/pekno/sunobot)
   
 </div>
+
 ## Description
 
 SUNO Discord Bot is a versatile music bot designed to play SUNO music directly in your Discord server. Simply provide a SUNO URL, and the bot will play the music for you. The bot also allows you to manage the music queue with commands to add, remove, skip, pause, resume, and stop music. Additionally, you can search and save local SUNO music. **It can also generate lyrics and song if you provide a `OPENAI_API_KEY`**
