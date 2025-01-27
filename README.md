@@ -3,6 +3,7 @@
 
 <div align="center">
   
+![GitHub Tag](https://img.shields.io/github/v/tag/pekno/sunobot?label=latest%20version)
 [![Docker pulls](https://img.shields.io/docker/pulls/pekno/sunobot)](https://hub.docker.com/r/pekno/sunobot)
   
 </div>
