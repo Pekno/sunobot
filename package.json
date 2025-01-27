@@ -1,6 +1,6 @@
 {
   "name": "suno-bot",
-  "version": "2.0.0",
+  "version": "1.0.0",
   "description": "Discord bot to read suno musics",
   "main": "./src/main/main.ts",
   "scripts": {
