@@ -24,13 +24,12 @@ import {
 	VoiceConnectionStatus,
 	PlayerSubscription,
 } from '@discordjs/voice';
-import { Logger } from './LoggerService';
 import { v4 } from 'uuid';
 import { SunoPlayer } from '../model/SunoPlayer';
 import { SunoSong } from '../model/SunoSong';
 import { CONFIG } from '../config/config';
 import { SunoClip } from '../model/SunoClip';
-import { LocaleError } from '../model/LocalError';
+import { LocaleError, Loggers } from '@pekno/simple-discordbot';
 
 export class AudioService {
 	private _sunoPlayer: SunoPlayer;
@@ -87,7 +86,9 @@ export class AudioService {
 
 		this.bindConnectionEvent(interaction);
 
-		Logger.info(`AUDIO SERVICE : JOIN VOICE CHANNEL - ${voiceChannelId}`);
+		Loggers.get().info(
+			`AUDIO SERVICE : JOIN VOICE CHANNEL - ${voiceChannelId}`
+		);
 	};
 
 	private bindConnectionEvent = (interaction: CommandInteraction) => {
@@ -102,7 +103,7 @@ export class AudioService {
 		this._connection.removeAllListeners(VoiceConnectionStatus.Disconnected);
 		this._connection.on(VoiceConnectionStatus.Disconnected, async () => {
 			try {
-				Logger.warn(`Problems with connection`);
+				Loggers.get().warn(`Problems with connection`);
 				await Promise.race([
 					entersState(
 						this._connection,
@@ -116,7 +117,7 @@ export class AudioService {
 					),
 				]);
 			} catch (error) {
-				Logger.error(error);
+				Loggers.get().error(error);
 				this.leaveVoiceChannel();
 				this.joinVoiceChannel(interaction);
 			}
@@ -132,7 +133,7 @@ export class AudioService {
 		if (this._audioSubscription) {
 			this._audioSubscription.unsubscribe();
 		}
-		Logger.info(`AUDIO SERVICE : LEFT VOICE CHANNEL`);
+		Loggers.get().info(`AUDIO SERVICE : LEFT VOICE CHANNEL`);
 	};
 
 	private handleInteraction = async <T>(
@@ -253,12 +254,12 @@ export class AudioService {
 
 			const uuid = v4();
 			const review = new ButtonBuilder()
-				.setCustomId(`review_lyrics;${uuid}`)
+				.setCustomId(`review_lyrics;lyricsId:=${uuid}`)
 				.setLabel('Review')
 				.setStyle(ButtonStyle.Primary);
 
 			const abort = new ButtonBuilder()
-				.setCustomId(`abort_lyrics;${uuid}`)
+				.setCustomId(`abort_lyrics;lyricsId:=${uuid}`)
 				.setLabel('Abort')
 				.setStyle(ButtonStyle.Secondary);
 
@@ -285,26 +286,26 @@ export class AudioService {
 
 	abortLyrics = async (interaction: ButtonInteraction, lyricsId: string) => {
 		await interaction.deferReply({ ephemeral: true });
-		const lyrics = this._lyricsMap.get(lyricsId);
-		if (!lyrics) throw new LocaleError('error.audio.no_lyrics');
+		const sunoSong = this._lyricsMap.get(lyricsId);
+		if (!sunoSong) throw new LocaleError('error.audio.no_sunosong');
 		await interaction.editReply({
-			content: `Aborted lyrics from "${lyrics.title}"`,
+			content: `Aborted lyrics from "${sunoSong.title}"`,
 		});
 		this._lyricsMap.delete(lyricsId);
 	};
 
 	reviewLyrics = async (interaction: ButtonInteraction, lyricsId: string) => {
-		const lyrics = this._lyricsMap.get(lyricsId);
-		if (!lyrics) throw new LocaleError('error.audio.no_lyrics');
+		const sunoSong = this._lyricsMap.get(lyricsId);
+		if (!sunoSong) throw new LocaleError('error.audio.no_sunosong');
 		const modal = new ModalBuilder()
-			.setCustomId(`prompt_modal;${lyricsId}`)
-			.setTitle(`${lyrics.title}`);
+			.setCustomId(`prompt_modal;lyricsId:=${lyricsId}`)
+			.setTitle(`${sunoSong.title}`);
 
 		const lyricsTextFieldInput = new TextInputBuilder()
 			.setCustomId('lyrics')
 			.setLabel('Lyrics :')
 			.setPlaceholder(`Lyrics`)
-			.setValue(lyrics.lyrics)
+			.setValue(sunoSong.lyrics)
 			.setRequired(true)
 			.setStyle(TextInputStyle.Paragraph);
 
@@ -312,7 +313,7 @@ export class AudioService {
 			.setCustomId('tags')
 			.setLabel('Tags :')
 			.setPlaceholder(`Tags`)
-			.setValue(lyrics.styles.join(','))
+			.setValue(sunoSong.styles.join(','))
 			.setRequired(true)
 			.setStyle(TextInputStyle.Short);
 
@@ -330,20 +331,20 @@ export class AudioService {
 
 	generateSong = async (
 		interaction: ModalSubmitInteraction,
-		payload: {
-			lyricsId: string;
-			lyrics: string;
-			tags: string;
-		}
+		lyricsId: string,
+		lyrics?: string,
+		tags?: string
 	) => {
 		await this.handleInteraction(interaction, async () => {
-			const lyrics = this._lyricsMap.get(payload.lyricsId);
 			if (!lyrics) throw new LocaleError('error.audio.no_lyrics');
-			lyrics.title = `${lyrics.title} by @${interaction.user.username}`;
-			lyrics.lyrics = payload.lyrics;
-			lyrics.styles = payload.tags.split(', ');
+			if (!tags) throw new LocaleError('error.audio.no_tags');
+			const sunoSong = this._lyricsMap.get(lyricsId);
+			if (!sunoSong) throw new LocaleError('error.audio.no_sunosong');
+			sunoSong.title = `${sunoSong.title} by @${interaction.user.username}`;
+			sunoSong.lyrics = lyrics;
+			sunoSong.styles = tags.split(', ');
 
-			const sunoCLips = await this._sunoService.generateSong(lyrics, true);
+			const sunoCLips = await this._sunoService.generateSong(sunoSong, true);
 			for (const clip of sunoCLips) {
 				this._sunoPlayer.play(clip);
 			}

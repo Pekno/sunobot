@@ -6,9 +6,9 @@ import {
 } from 'discord.js';
 import { SunoClipMetadata } from './SunoClipMetadata';
 import { CONFIG } from '../config/config';
-import { Logger } from '../services/LoggerService';
 import got from 'got';
 import i18n from 'i18n';
+import { Loggers } from '@pekno/simple-discordbot';
 
 export class SunoClip {
 	id: string;
@@ -84,7 +84,9 @@ export class SunoClip {
 	}
 
 	get audioResource(): AudioResource<null> {
-		Logger.info(`CLIP : Creating Audio Source Stream from : ${this.streamUrl}`);
+		Loggers.get().info(
+			`CLIP : Creating Audio Source Stream from : ${this.streamUrl}`
+		);
 		return createAudioResource(
 			this.isLocal ? this.streamUrl : got.stream(this.streamUrl)
 		);

@@ -1,6 +1,5 @@
 import { AudioPlayer, AudioPlayerStatus } from '@discordjs/voice';
 import { SunoQueue } from './SunoQueue';
-import { Logger } from '../services/LoggerService';
 import { SunoClip } from './SunoClip';
 import {
 	ActionRowBuilder,
@@ -11,6 +10,7 @@ import {
 	TextChannel,
 } from 'discord.js';
 import i18n from 'i18n';
+import { Loggers } from '@pekno/simple-discordbot';
 
 export class SunoPlayer {
 	private _alreadyPlayedSunoQueue: SunoQueue;
@@ -36,7 +36,7 @@ export class SunoPlayer {
 		this.audioPlayer.play(this._currentSunoClip.audioResource);
 		// No need to await just to increment playcount
 		this._incrementPlayCount(this._currentSunoClip).catch((e) =>
-			Logger.error(e)
+			Loggers.get().error(e)
 		);
 	};
 
@@ -138,7 +138,7 @@ export class SunoPlayer {
 
 	private updatePlayer = (isDisabled: boolean = false) => {
 		if (this._playerMessage) {
-			Logger.info(`PLAYER : UPDATE PLAYER EMBED`);
+			Loggers.get().info(`PLAYER : UPDATE PLAYER EMBED`);
 			this._playerMessage.edit({
 				embeds: [this.buildEmbed()],
 				components: [this.buildPlayerButton(isDisabled)],
@@ -155,7 +155,9 @@ export class SunoPlayer {
 				embeds: [this.buildEmbed()],
 				components: [this.buildPlayerButton(false)],
 			});
-			Logger.info(`PLAYER : CREATE PLAYER MESSAGE - ${this._playerMessage.id}`);
+			Loggers.get().info(
+				`PLAYER : CREATE PLAYER MESSAGE - ${this._playerMessage.id}`
+			);
 		}
 	};
 
@@ -211,7 +213,9 @@ export class SunoPlayer {
 		this._leaveVoiceChannel = () => {
 			leaveVoiceChannel();
 			if (!this._playerMessage) return;
-			Logger.info(`PLAYER : DELETE PLAYER MESSAGE - ${this._playerMessage.id}`);
+			Loggers.get().info(
+				`PLAYER : DELETE PLAYER MESSAGE - ${this._playerMessage.id}`
+			);
 			//this._playerMessage.delete();
 			this.updatePlayer(true);
 			this._playerMessage = null;
@@ -220,7 +224,7 @@ export class SunoPlayer {
 		};
 
 		this._audioPlayer.on('stateChange', async (oldState, newState) => {
-			Logger.info(
+			Loggers.get().info(
 				`PLAYER : STATE CHANGE FROM ${oldState.status.toUpperCase()} TO ${newState.status.toUpperCase()} - ${this._currentSunoClip?.id ?? ''}`
 			);
 			switch (newState.status) {
@@ -231,7 +235,7 @@ export class SunoPlayer {
 		});
 
 		this._audioPlayer.on('error', (e) => {
-			Logger.error(e);
+			Loggers.get().error(e);
 		});
 	}
 }

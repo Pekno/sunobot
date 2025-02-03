@@ -3,17 +3,18 @@ import fs from 'fs';
 import path from 'path';
 import { LocalSunoClip, SunoClip } from '../model/SunoClip';
 import axios from 'axios';
-import { Logger } from './LoggerService';
 import { SunoProfile } from '../model/SunoProfile';
 import { SunoService } from './SunoService';
-import { LocaleError } from '../model/LocalError';
+import { LocaleError, Loggers } from '@pekno/simple-discordbot';
 export class LocalAudioFileService {
 	private _sunoService: SunoService;
 
 	constructor(sunoApi: SunoService) {
 		this._sunoService = sunoApi;
 		if (!fs.existsSync(CONFIG.SAVED_DATA_PATH)) {
-			Logger.info(`LOCAL_AUDIO : Create Folder - ${CONFIG.SAVED_DATA_PATH}`);
+			Loggers.get().info(
+				`LOCAL_AUDIO : Create Folder - ${CONFIG.SAVED_DATA_PATH}`
+			);
 			fs.mkdirSync(CONFIG.SAVED_DATA_PATH, { recursive: true });
 		}
 	}
@@ -25,7 +26,7 @@ export class LocalAudioFileService {
 		for (const file of files.filter(
 			(file) => path.extname(file).toLowerCase() === '.mp3'
 		)) {
-			Logger.info(
+			Loggers.get().info(
 				`LOCAL_AUDIO : Grabbing SunoClip Info - ${file.replace('.mp3', '')}`
 			);
 			const clip = await this._sunoService.getClip(file.replace('.mp3', ''));
@@ -71,30 +72,36 @@ export class LocalAudioFileService {
 		profileHandle: string,
 		sunoId: string
 	): LocalSunoClip | null => {
-		Logger.info(
+		Loggers.get().info(
 			`LOCAL_AUDIO : Trying to Load LocalSunoClip - @${profileHandle} > ${sunoId}`
 		);
 		const path = `${CONFIG.SAVED_DATA_PATH}/${profileHandle}/${sunoId}.json`;
 		if (!fs.existsSync(path)) return null;
-		Logger.info(`LOCAL_AUDIO : LocalSunoClip - ${sunoId} /!\\ Found /!\\`);
+		Loggers.get().info(
+			`LOCAL_AUDIO : LocalSunoClip - ${sunoId} /!\\ Found /!\\`
+		);
 		return new LocalSunoClip(JSON.parse(fs.readFileSync(path, 'utf8')));
 	};
 
 	getClip = (sunoId: string): LocalSunoClip | null => {
-		Logger.info(`LOCAL_AUDIO : Trying to Load LocalSunoClip - ${sunoId}`);
+		Loggers.get().info(
+			`LOCAL_AUDIO : Trying to Load LocalSunoClip - ${sunoId}`
+		);
 		const foundPath = this.findFileInDirectory(
 			`${CONFIG.SAVED_DATA_PATH}`,
 			`${sunoId}.json`
 		);
 		if (!foundPath) return null;
-		Logger.info(`LOCAL_AUDIO : LocalSunoClip - ${sunoId} /!\\ Found /!\\`);
+		Loggers.get().info(
+			`LOCAL_AUDIO : LocalSunoClip - ${sunoId} /!\\ Found /!\\`
+		);
 		return new LocalSunoClip(JSON.parse(fs.readFileSync(foundPath, 'utf8')));
 	};
 
 	private makeprofileDir = (profileName: string): string => {
 		const savePath = `${CONFIG.SAVED_DATA_PATH}/${profileName}`;
 		if (!fs.existsSync(savePath)) {
-			Logger.info(
+			Loggers.get().info(
 				`LOCAL_AUDIO : Create Folder and Fetching Profile - ${savePath}`
 			);
 			fs.mkdirSync(savePath, { recursive: true });
@@ -132,13 +139,15 @@ export class LocalAudioFileService {
 				// Save the audio and metadata files
 				fs.writeFileSync(`${savePath}/${clip.id}.mp3`, result.data);
 				fs.writeFileSync(`${savePath}/${clip.id}.json`, JSON.stringify(clip));
-				Logger.info(`LOCAL_AUDIO : ${clip.id} - Audio URL is valid, Saved`);
+				Loggers.get().info(
+					`LOCAL_AUDIO : ${clip.id} - Audio URL is valid, Saved`
+				);
 				return; // Exit the function once saved successfully
 			}
 
 			// If audio_url is still not valid and retries are left, retry after a delay
 			if (retries < MAX_RETRIES) {
-				Logger.info(
+				Loggers.get().info(
 					`LOCAL_AUDIO : ${clip.id} - Audio URL is not valid yet. Retrying (${retries + 1}/${MAX_RETRIES})...`
 				);
 
@@ -167,7 +176,7 @@ export class LocalAudioFileService {
 			// Start the retry logic
 			await retrySaveClip(sunoClip, 0);
 		} catch (e: any) {
-			Logger.error(e.message);
+			Loggers.get().error(e.message);
 		}
 	};
 

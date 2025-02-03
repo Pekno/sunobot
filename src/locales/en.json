@@ -29,7 +29,9 @@
             "no_guild_id": "The command was not sent from a server. Please ensure you are in a Discord server."
         },
         "audio": {
-            "no_lyrics": "No lyrics found for the specified ID. Please verify the ID and try again.",
+            "no_lyrics": "No lyrics found for the song. Please verify your submission and try again.",
+            "no_tags": "No Tags found for tags. Please verify your submission and try again.",
+            "no_sunosong": "No lyrics found for the specified ID. Please verify the ID and try again.",
             "no_openai": "The OpenAI Service is not set up correctly. Please check your configuration.",
             "missing_field_prompt": "A prompt is required but was not provided. Please include a prompt.",
             "missing_field_profile": "No Suno profile name has been provided. Please specify a profile name.",

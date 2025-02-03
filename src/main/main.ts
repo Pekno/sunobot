@@ -1,44 +1,64 @@
-import { Logger } from '../services/LoggerService';
-import { Bot } from '../services/Bot';
-import {
-	AutoCompleteCommand,
-	ButtonCommand,
-	Command,
-	CommandList,
-	CommandOption,
-	ModalSubmitCommand,
-} from '../model/DiscordModels';
 import {
 	ApplicationCommandOptionType,
 	AutocompleteInteraction,
 	ButtonInteraction,
 	ChatInputCommandInteraction,
 	Client,
+	GatewayIntentBits,
+	ModalSubmitFields,
 	ModalSubmitInteraction,
 } from 'discord.js';
 import { AudioService } from '../services/AudioService';
 import { CONFIG } from '../config/config';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import i18n from 'i18n';
-import { LocaleError } from '../model/LocalError';
+import {
+	AutoCompleteCommand,
+	ButtonCommand,
+	Command,
+	CommandList,
+	CommandOption,
+	LocaleError,
+	Loggers,
+	ModalSubmitCommand,
+	SimpleDiscordBot,
+} from '@pekno/simple-discordbot';
+
+const localesPath = path.resolve(__dirname, '../locales');
+const files = fs.readdirSync(localesPath);
+const localList = files.map((f) => f.replace('.json', '').toLowerCase());
 
 i18n.configure({
-	locales: CONFIG.AVAILABLE_LOCAL,
-	directory: path.resolve(__dirname, '../locales'),
+	locales: localList,
+	directory: localesPath,
 	defaultLocale: 'en',
 	objectNotation: true,
 });
-if (!CONFIG.AVAILABLE_LOCAL.includes(CONFIG.LOCALE.toLowerCase()))
+if (!localList.includes(CONFIG.LOCALE.toLowerCase()))
 	throw new LocaleError('error._default', {
 		message: `LOCALE env var not recognized`,
 	});
 i18n.setLocale(CONFIG.LOCALE.toLowerCase());
-Logger.info(`LOCALE : ${CONFIG.LOCALE.toUpperCase()}`);
+Loggers.get().info(`LOCALE : ${CONFIG.LOCALE.toUpperCase()}`);
 dotenv.config({ path: path.resolve(__dirname, '../env/.env') });
 
-const commandsList = new CommandList();
-commandsList.push(
+const audioService = new AudioService();
+const simpleBot = new SimpleDiscordBot<AudioService>(
+	{
+		discord_token: CONFIG.DISCORD_TOKEN ?? '',
+		discord_id: CONFIG.DISCORD_ID ?? '',
+		intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates],
+		locale: CONFIG.LOCALE,
+		available_locale: localList,
+		locale_directory: localesPath,
+	},
+	audioService
+);
+
+const simpleCommandsList = new CommandList<AudioService>();
+simpleCommandsList.push(
 	new Command({
 		name: 'play',
 		description: 'Play a suno music',
@@ -54,20 +74,20 @@ commandsList.push(
 			interaction: ChatInputCommandInteraction,
 			client: Client,
 			audioService: AudioService,
-			byPassParameters: string
+			extraInfo: string
 		) => {
-			const sunoUrl = byPassParameters
-				? `https://suno.com/song/${byPassParameters}`
+			const sunoUrl = extraInfo
+				? `https://suno.com/song/${extraInfo}`
 				: interaction.options.getString('suno_url');
 			await audioService.play(interaction, sunoUrl);
 		},
 	})
 );
 
-commandsList.push(
+simpleCommandsList.push(
 	new Command({
 		name: 'skip',
-		clickAlias: 'sunoplayer_skip',
+		clickAlias: 'button_sunoplayer_skip',
 		description: 'Skip a suno music',
 		execute: async (
 			interaction: ChatInputCommandInteraction,
@@ -79,10 +99,10 @@ commandsList.push(
 	})
 );
 
-commandsList.push(
+simpleCommandsList.push(
 	new Command({
 		name: 'pause',
-		clickAlias: 'sunoplayer_pause',
+		clickAlias: 'button_sunoplayer_pause',
 		description: 'Pause a suno music',
 		execute: async (
 			interaction: ChatInputCommandInteraction,
@@ -94,10 +114,10 @@ commandsList.push(
 	})
 );
 
-commandsList.push(
+simpleCommandsList.push(
 	new Command({
 		name: 'resume',
-		clickAlias: 'sunoplayer_resume',
+		clickAlias: 'button_sunoplayer_resume',
 		description: 'Resume a suno music',
 		execute: async (
 			interaction: ChatInputCommandInteraction,
@@ -109,10 +129,10 @@ commandsList.push(
 	})
 );
 
-commandsList.push(
+simpleCommandsList.push(
 	new Command({
 		name: 'stop',
-		clickAlias: 'sunoplayer_stop',
+		clickAlias: 'button_sunoplayer_stop',
 		description: 'Stop and clear a suno playlist',
 		execute: async (
 			interaction: ChatInputCommandInteraction,
@@ -124,7 +144,7 @@ commandsList.push(
 	})
 );
 
-commandsList.push(
+simpleCommandsList.push(
 	new Command({
 		name: 'generate',
 		description: 'Generate a suno music',
@@ -148,53 +168,61 @@ commandsList.push(
 	})
 );
 
-commandsList.push(
+simpleCommandsList.push(
 	new ButtonCommand({
-		name: 'review_lyrics',
+		name: 'button_review_lyrics',
 		execute: async (
 			interaction: ButtonInteraction,
 			client: Client,
 			audioService: AudioService,
-			byPassParameters: string
+			extraInfo: any
 		) => {
-			await audioService.reviewLyrics(interaction, byPassParameters);
+			const { lyricsId } = extraInfo as {
+				lyricsId: string;
+			};
+			await audioService.reviewLyrics(interaction, lyricsId);
 		},
 	})
 );
 
-commandsList.push(
+simpleCommandsList.push(
 	new ButtonCommand({
-		name: 'abort_lyrics',
+		name: 'button_abort_lyrics',
 		execute: async (
 			interaction: ButtonInteraction,
 			client: Client,
 			audioService: AudioService,
-			byPassParameters: string
+			extraInfo: any
 		) => {
-			await audioService.abortLyrics(interaction, byPassParameters);
+			const { lyricsId } = extraInfo as {
+				lyricsId: string;
+			};
+			await audioService.abortLyrics(interaction, lyricsId);
 		},
 	})
 );
 
-commandsList.push(
+simpleCommandsList.push(
 	new ModalSubmitCommand({
 		name: 'submit_prompt_modal',
 		execute: async (
 			interaction: ModalSubmitInteraction,
 			client: Client,
 			audioService: AudioService,
-			byPassParameters: {
-				lyricsId: string;
-				lyrics: string;
-				tags: string;
-			}
+			extraInfo: any,
+			modalPayload?: ModalSubmitFields
 		) => {
-			await audioService.generateSong(interaction, byPassParameters);
+			const { lyricsId } = extraInfo as {
+				lyricsId: string;
+			};
+			const lyrics = modalPayload?.getField('lyrics')?.value;
+			const tags = modalPayload?.getField('tags')?.value;
+			await audioService.generateSong(interaction, lyricsId, lyrics, tags);
 		},
 	})
 );
 
-commandsList.push(
+simpleCommandsList.push(
 	new AutoCompleteCommand({
 		name: 'profile_autocomplete',
 		execute: async (
@@ -208,7 +236,7 @@ commandsList.push(
 	})
 );
 
-commandsList.push(
+simpleCommandsList.push(
 	new Command({
 		name: 'profile',
 		description: 'Get a suno profile',
@@ -232,7 +260,8 @@ commandsList.push(
 	})
 );
 
-const bot = new Bot();
-bot.start(commandsList).catch((e) => {
-	Logger.error(e.message);
+audioService.start().then(() => {
+	simpleBot.start(simpleCommandsList).catch((e: any) => {
+		Loggers.get().error(e, e.stack);
+	});
 });

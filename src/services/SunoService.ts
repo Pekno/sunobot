@@ -6,7 +6,7 @@ import { SunoProfile } from '../model/SunoProfile';
 import { LocalAudioFileService } from './LocalAudioFileService';
 import { ApplicationCommandOptionChoiceData } from 'discord.js';
 import { SunoPlaylist } from '../model/SunoPlaylist';
-import { LocaleError } from '../model/LocalError';
+import { LocaleError } from '@pekno/simple-discordbot';
 
 const COOKIE_PREFIX = 'SUNO_COOKIE_';
 

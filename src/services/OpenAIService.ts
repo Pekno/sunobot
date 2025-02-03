@@ -1,8 +1,7 @@
 import OpenAI from 'openai';
 import { SunoSong } from '../model/SunoSong';
-import { Logger } from './LoggerService';
 import { CONFIG } from '../config/config';
-import { LocaleError } from '../model/LocalError';
+import { LocaleError, Loggers } from '@pekno/simple-discordbot';
 
 const getLang = (lang: string): string => {
 	switch (lang.toUpperCase()) {
@@ -115,7 +114,7 @@ export class OpenAIService {
 
 	generateLyricsFromPrompt = async (prompt: string): Promise<SunoSong> => {
 		// TODO : add check for OpenAI credits
-		Logger.debug(`OPEN_AI : GENERATING FROM PROMPT- ${prompt}`);
+		Loggers.get().debug(`OPEN_AI : GENERATING FROM PROMPT- ${prompt}`);
 		const completion = await this._openai.chat.completions.create({
 			model: 'gpt-4o-mini',
 			messages: [
@@ -133,7 +132,9 @@ export class OpenAIService {
 		if (!completion.choices[0].message.content)
 			throw new LocaleError('error.openai.cant_get_song');
 		const sunoSong = SunoSong.fromJSON(completion.choices[0].message.content);
-		Logger.debug(`OPEN_AI : GOT LYRICS - ${JSON.stringify(sunoSong, null, 2)}`);
+		Loggers.get().debug(
+			`OPEN_AI : GOT LYRICS - ${JSON.stringify(sunoSong, null, 2)}`
+		);
 		return sunoSong;
 	};
 }

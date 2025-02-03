@@ -29,7 +29,9 @@
             "no_guild_id": "La commande n'a pas été envoyée depuis un serveur. Veuillez vous assurer que vous êtes dans un serveur Discord."
         },
         "audio": {
-            "no_lyrics": "Aucune parole trouvée pour l'ID spécifié. Veuillez vérifier l'ID et réessayer.",
+            "no_lyrics": "Aucune parole trouvée pour la chanson. Veuillez vérifier votre soumission et réessayer.",
+            "no_tags": "Aucun tag trouvé. Veuillez vérifier votre soumission et réessayer.",
+            "no_sunosong": "Aucune parole trouvée pour l'ID spécifié. Veuillez vérifier l'ID et réessayer.",
             "no_openai": "Le service OpenAI n'est pas configuré correctement. Veuillez vérifier votre configuration.",
             "missing_field_prompt": "Une invite est requise mais n'a pas été fournie. Veuillez inclure une invite.",
             "missing_field_profile": "Aucun nom de profil Suno n'a été fourni. Veuillez spécifier un nom de profil.",

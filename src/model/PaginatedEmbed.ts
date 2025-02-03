@@ -123,7 +123,7 @@ export class PaginatedEmbed<T extends SunoClipList> {
 
 	private createSelectMenu(): StringSelectMenuBuilder {
 		return new StringSelectMenuBuilder()
-			.setCustomId('suno_optionselect_play')
+			.setCustomId('play')
 			.setPlaceholder('Select a song')
 			.addOptions(this.options[this.currentPage]);
 	}
