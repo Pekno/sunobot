@@ -26,7 +26,6 @@ jobs:
       # Set the concatenated value as an environment variable
       - name: Set Docker Repository Name
         run: |
-          # Concatenate DOCKERHUB_USERNAME and DOCKERHUB_IMAGE to form the image name
           echo "DOCKER_REPOSITORY=${{ vars.DOCKERHUB_USERNAME }}/${{ vars.DOCKERHUB_IMAGE }}" >> $GITHUB_ENV
       
       # Set up Node.js
