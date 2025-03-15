@@ -53,129 +53,124 @@ const simpleBot = new SimpleDiscordBot<AudioService>(
 );
 
 const simpleCommandsList = new CommandList<AudioService>();
-simpleCommandsList.push(
-	new Command({
-		name: 'play',
-		description: 'Play a suno music',
-		options: [
-			new CommandOption({
-				name: 'suno_url',
-				description: 'complete suno url',
-				type: ApplicationCommandOptionType.String,
-				required: true,
-			}),
-		],
-		execute: async (
-			interaction: ChatInputCommandInteraction,
-			client: Client,
-			audioService: AudioService,
-			extraInfo: string
-		) => {
-			const sunoUrl = extraInfo
-				? `https://suno.com/song/${extraInfo}`
-				: interaction.options.getString('suno_url');
-			await audioService.play(interaction, sunoUrl);
-		},
-	})
-);
-
-simpleCommandsList.push(
-	new Command({
-		name: 'skip',
-		clickAlias: 'button_sunoplayer_skip',
-		description: 'Skip a suno music',
-		execute: async (
-			interaction: ChatInputCommandInteraction,
-			client: Client,
-			audioService: AudioService
-		) => {
-			await audioService.skip(interaction);
-		},
-	})
-);
-
-simpleCommandsList.push(
-	new Command({
-		name: 'pause',
-		clickAlias: 'button_sunoplayer_pause',
-		description: 'Pause a suno music',
-		execute: async (
-			interaction: ChatInputCommandInteraction,
-			client: Client,
-			audioService: AudioService
-		) => {
-			await audioService.pause(interaction);
-		},
-	})
-);
-
-simpleCommandsList.push(
-	new Command({
-		name: 'resume',
-		clickAlias: 'button_sunoplayer_resume',
-		description: 'Resume a suno music',
-		execute: async (
-			interaction: ChatInputCommandInteraction,
-			client: Client,
-			audioService: AudioService
-		) => {
-			await audioService.resume(interaction);
-		},
-	})
-);
-
-simpleCommandsList.push(
-	new Command({
-		name: 'stop',
-		clickAlias: 'button_sunoplayer_stop',
-		description: 'Stop and clear a suno playlist',
-		execute: async (
-			interaction: ChatInputCommandInteraction,
-			client: Client,
-			audioService: AudioService
-		) => {
-			await audioService.stop(interaction);
-		},
-	})
-);
-
-simpleCommandsList.push(
-	new AutoCompleteCommand({
-		name: 'profile_autocomplete',
-		execute: async (
-			interaction: AutocompleteInteraction,
-			client: Client,
-			audioService: AudioService
-		) => {
-			const focusedOption = interaction.options.getFocused(true);
-			await audioService.getLocalProfiles(interaction, focusedOption.value);
-		},
-	})
-);
-
-simpleCommandsList.push(
-	new Command({
-		name: 'profile',
-		description: 'Get a suno profile',
-		options: [
-			new CommandOption({
-				name: 'suno_profile',
-				description: 'profile',
-				type: ApplicationCommandOptionType.String,
-				required: true,
-				autocomplete: true,
-			}),
-		],
-		execute: async (
-			interaction: ChatInputCommandInteraction,
-			client: Client,
-			audioService: AudioService
-		) => {
-			const sunoProfile = interaction.options.getString('suno_profile');
-			await audioService.profile(interaction, sunoProfile);
-		},
-	})
-);
+simpleCommandsList
+	.push(
+		new Command({
+			name: 'play',
+			description: 'Play a suno music',
+			options: [
+				new CommandOption({
+					name: 'suno_url',
+					description: 'complete suno url',
+					type: ApplicationCommandOptionType.String,
+					required: true,
+				}),
+			],
+			execute: async (
+				interaction: ChatInputCommandInteraction,
+				client: Client,
+				audioService: AudioService,
+				extraInfo: string
+			) => {
+				const sunoUrl = extraInfo
+					? `https://suno.com/song/${extraInfo}`
+					: interaction.options.getString('suno_url');
+				await audioService.play(interaction, sunoUrl);
+			},
+		})
+	)
+	.push(
+		new Command({
+			name: 'skip',
+			clickAlias: 'button_sunoplayer_skip',
+			description: 'Skip a suno music',
+			execute: async (
+				interaction: ChatInputCommandInteraction,
+				client: Client,
+				audioService: AudioService
+			) => {
+				await audioService.skip(interaction);
+			},
+		})
+	)
+	.push(
+		new Command({
+			name: 'pause',
+			clickAlias: 'button_sunoplayer_pause',
+			description: 'Pause a suno music',
+			execute: async (
+				interaction: ChatInputCommandInteraction,
+				client: Client,
+				audioService: AudioService
+			) => {
+				await audioService.pause(interaction);
+			},
+		})
+	)
+	.push(
+		new Command({
+			name: 'resume',
+			clickAlias: 'button_sunoplayer_resume',
+			description: 'Resume a suno music',
+			execute: async (
+				interaction: ChatInputCommandInteraction,
+				client: Client,
+				audioService: AudioService
+			) => {
+				await audioService.resume(interaction);
+			},
+		})
+	)
+	.push(
+		new Command({
+			name: 'stop',
+			clickAlias: 'button_sunoplayer_stop',
+			description: 'Stop and clear a suno playlist',
+			execute: async (
+				interaction: ChatInputCommandInteraction,
+				client: Client,
+				audioService: AudioService
+			) => {
+				await audioService.stop(interaction);
+			},
+		})
+	)
+	.push(
+		new AutoCompleteCommand({
+			name: 'profile_autocomplete',
+			execute: async (
+				interaction: AutocompleteInteraction,
+				client: Client,
+				audioService: AudioService
+			) => {
+				const focusedOption = interaction.options.getFocused(true);
+				await audioService.getLocalProfiles(interaction, focusedOption.value);
+			},
+		})
+	)
+	.push(
+		new Command({
+			name: 'profile',
+			description: 'Get a suno profile',
+			options: [
+				new CommandOption({
+					name: 'suno_profile',
+					description: 'profile',
+					type: ApplicationCommandOptionType.String,
+					required: true,
+					autocomplete: true,
+				}),
+			],
+			execute: async (
+				interaction: ChatInputCommandInteraction,
+				client: Client,
+				audioService: AudioService
+			) => {
+				const sunoProfile = interaction.options.getString('suno_profile');
+				await audioService.profile(interaction, sunoProfile);
+			},
+		})
+	);
 
 audioService.start().then(() => {
 	simpleBot.start(simpleCommandsList).catch((e: any) => {
