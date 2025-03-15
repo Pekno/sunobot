@@ -1,12 +1,9 @@
 import {
 	ApplicationCommandOptionType,
 	AutocompleteInteraction,
-	ButtonInteraction,
 	ChatInputCommandInteraction,
 	Client,
 	GatewayIntentBits,
-	ModalSubmitFields,
-	ModalSubmitInteraction,
 } from 'discord.js';
 import { AudioService } from '../services/AudioService';
 import { CONFIG } from '../config/config';
@@ -16,13 +13,11 @@ import fs from 'fs';
 import i18n from 'i18n';
 import {
 	AutoCompleteCommand,
-	ButtonCommand,
 	Command,
 	CommandList,
 	CommandOption,
 	LocaleError,
 	Loggers,
-	ModalSubmitCommand,
 	SimpleDiscordBot,
 } from '@pekno/simple-discordbot';
 
@@ -140,84 +135,6 @@ simpleCommandsList.push(
 			audioService: AudioService
 		) => {
 			await audioService.stop(interaction);
-		},
-	})
-);
-
-simpleCommandsList.push(
-	new Command({
-		name: 'generate',
-		description: 'Generate a suno music',
-		options: [
-			new CommandOption({
-				name: 'suno_prompt',
-				description: 'prompt',
-				type: ApplicationCommandOptionType.String,
-				required: true,
-			}),
-		],
-		execute: async (
-			interaction: ChatInputCommandInteraction,
-			client: Client,
-			audioService: AudioService
-		) => {
-			const sunoPrompt = interaction.options.getString('suno_prompt');
-			await audioService.generateLyrics(interaction, sunoPrompt);
-		},
-		registerPredicate: () => !!CONFIG.OPENAI_API_KEY,
-	})
-);
-
-simpleCommandsList.push(
-	new ButtonCommand({
-		name: 'button_review_lyrics',
-		execute: async (
-			interaction: ButtonInteraction,
-			client: Client,
-			audioService: AudioService,
-			extraInfo: any
-		) => {
-			const { lyricsId } = extraInfo as {
-				lyricsId: string;
-			};
-			await audioService.reviewLyrics(interaction, lyricsId);
-		},
-	})
-);
-
-simpleCommandsList.push(
-	new ButtonCommand({
-		name: 'button_abort_lyrics',
-		execute: async (
-			interaction: ButtonInteraction,
-			client: Client,
-			audioService: AudioService,
-			extraInfo: any
-		) => {
-			const { lyricsId } = extraInfo as {
-				lyricsId: string;
-			};
-			await audioService.abortLyrics(interaction, lyricsId);
-		},
-	})
-);
-
-simpleCommandsList.push(
-	new ModalSubmitCommand({
-		name: 'submit_prompt_modal',
-		execute: async (
-			interaction: ModalSubmitInteraction,
-			client: Client,
-			audioService: AudioService,
-			extraInfo: any,
-			modalPayload?: ModalSubmitFields
-		) => {
-			const { lyricsId } = extraInfo as {
-				lyricsId: string;
-			};
-			const lyrics = modalPayload?.getField('lyrics')?.value;
-			const tags = modalPayload?.getField('tags')?.value;
-			await audioService.generateSong(interaction, lyricsId, lyrics, tags);
 		},
 	})
 );

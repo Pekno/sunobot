@@ -1,19 +1,11 @@
 import {
-	ActionRowBuilder,
 	AutocompleteInteraction,
-	ButtonBuilder,
-	ButtonInteraction,
-	ButtonStyle,
 	CommandInteraction,
 	InteractionEditReplyOptions,
 	MessagePayload,
-	ModalBuilder,
 	ModalSubmitInteraction,
 	TextChannel,
-	TextInputBuilder,
-	TextInputStyle,
 } from 'discord.js';
-import { OpenAIService } from './OpenAIService';
 import { SunoService } from './SunoService';
 import {
 	entersState,
@@ -24,29 +16,18 @@ import {
 	VoiceConnectionStatus,
 	PlayerSubscription,
 } from '@discordjs/voice';
-import { v4 } from 'uuid';
 import { SunoPlayer } from '../model/SunoPlayer';
-import { SunoSong } from '../model/SunoSong';
-import { CONFIG } from '../config/config';
-import { SunoClip } from '../model/SunoClip';
 import { LocaleError, Loggers } from '@pekno/simple-discordbot';
 
 export class AudioService {
 	private _sunoPlayer: SunoPlayer;
-	private _openAiService: OpenAIService | undefined;
 	private _sunoService: SunoService;
-	private _lyricsMap: Map<string, SunoSong>;
 	private _connection: VoiceConnection;
 	private _audioSubscription: PlayerSubscription | undefined;
 
 	constructor() {
-		if (CONFIG.OPENAI_API_KEY) this._openAiService = new OpenAIService();
 		this._sunoService = new SunoService();
-		this._lyricsMap = new Map<string, SunoSong>();
-		this._sunoPlayer = new SunoPlayer(
-			this.leaveVoiceChannel,
-			this.incrementPlayCount
-		);
+		this._sunoPlayer = new SunoPlayer(this.leaveVoiceChannel);
 	}
 
 	public start = async () => {
@@ -122,10 +103,6 @@ export class AudioService {
 				this.joinVoiceChannel(interaction);
 			}
 		});
-	};
-
-	private incrementPlayCount = async (sunoClip: SunoClip): Promise<void> => {
-		await this._sunoService.incrementPlayCount(sunoClip);
 	};
 
 	private leaveVoiceChannel = () => {
@@ -237,123 +214,6 @@ export class AudioService {
 				preventForceJoinVC: true,
 				message: {
 					content: `⏹ Stopped song`,
-				},
-			};
-		});
-	};
-
-	generateLyrics = async (
-		interaction: CommandInteraction,
-		prompt: string | null
-	) => {
-		await this.handleInteraction(interaction, async () => {
-			if (!prompt) throw new LocaleError('error.audio.missing_field_prompt');
-			if (!this._openAiService) throw new LocaleError('error.audio.no_openai');
-			const sunoSong =
-				await this._openAiService.generateLyricsFromPrompt(prompt);
-
-			const uuid = v4();
-			const review = new ButtonBuilder()
-				.setCustomId(`review_lyrics;lyricsId:=${uuid}`)
-				.setLabel('Review')
-				.setStyle(ButtonStyle.Primary);
-
-			const abort = new ButtonBuilder()
-				.setCustomId(`abort_lyrics;lyricsId:=${uuid}`)
-				.setLabel('Abort')
-				.setStyle(ButtonStyle.Secondary);
-
-			const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-				review,
-				abort
-			);
-			this._lyricsMap.set(uuid, sunoSong);
-
-			return {
-				performedAction: true,
-				preventForceJoinVC: true,
-				message: {
-					content: `Your Lyrics for "${sunoSong.title}" are ready`,
-					components: [row],
-				},
-				deleteTimeout: 3600_000,
-				onDeleteCallback: () => {
-					this._lyricsMap.delete(uuid);
-				},
-			};
-		});
-	};
-
-	abortLyrics = async (interaction: ButtonInteraction, lyricsId: string) => {
-		await interaction.deferReply({ ephemeral: true });
-		const sunoSong = this._lyricsMap.get(lyricsId);
-		if (!sunoSong) throw new LocaleError('error.audio.no_sunosong');
-		await interaction.editReply({
-			content: `Aborted lyrics from "${sunoSong.title}"`,
-		});
-		this._lyricsMap.delete(lyricsId);
-	};
-
-	reviewLyrics = async (interaction: ButtonInteraction, lyricsId: string) => {
-		const sunoSong = this._lyricsMap.get(lyricsId);
-		if (!sunoSong) throw new LocaleError('error.audio.no_sunosong');
-		const modal = new ModalBuilder()
-			.setCustomId(`prompt_modal;lyricsId:=${lyricsId}`)
-			.setTitle(`${sunoSong.title}`);
-
-		const lyricsTextFieldInput = new TextInputBuilder()
-			.setCustomId('lyrics')
-			.setLabel('Lyrics :')
-			.setPlaceholder(`Lyrics`)
-			.setValue(sunoSong.lyrics)
-			.setRequired(true)
-			.setStyle(TextInputStyle.Paragraph);
-
-		const tagsTextFieldInput = new TextInputBuilder()
-			.setCustomId('tags')
-			.setLabel('Tags :')
-			.setPlaceholder(`Tags`)
-			.setValue(sunoSong.styles.join(','))
-			.setRequired(true)
-			.setStyle(TextInputStyle.Short);
-
-		modal.addComponents([
-			new ActionRowBuilder<TextInputBuilder>().addComponents(
-				lyricsTextFieldInput
-			),
-			new ActionRowBuilder<TextInputBuilder>().addComponents(
-				tagsTextFieldInput
-			),
-		]);
-
-		await interaction.showModal(modal);
-	};
-
-	generateSong = async (
-		interaction: ModalSubmitInteraction,
-		lyricsId: string,
-		lyrics?: string,
-		tags?: string
-	) => {
-		await this.handleInteraction(interaction, async () => {
-			if (!lyrics) throw new LocaleError('error.audio.no_lyrics');
-			if (!tags) throw new LocaleError('error.audio.no_tags');
-			const sunoSong = this._lyricsMap.get(lyricsId);
-			if (!sunoSong) throw new LocaleError('error.audio.no_sunosong');
-			sunoSong.title = `${sunoSong.title} by @${interaction.user.username}`;
-			sunoSong.lyrics = lyrics;
-			sunoSong.styles = tags.split(', ');
-
-			const sunoCLips = await this._sunoService.generateSong(sunoSong, true);
-			for (const clip of sunoCLips) {
-				this._sunoPlayer.play(clip);
-			}
-
-			return {
-				performedAction: true,
-				preventForceJoinVC: true,
-				message: {
-					content: `⏺ Added ${sunoCLips.map((c) => c.realTitle).join(',')}`,
 				},
 			};
 		});
