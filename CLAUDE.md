@@ -67,7 +67,12 @@ Errors thrown inside `execute`, usually `new LocaleError('i18n.key')`, are caugh
 
 ### Playback
 
-- The process holds a single `AudioService` → `SunoPlayer` → `VoiceConnection`. The queue and player message are global, so the bot effectively serves one guild at a time.
+- Playback state is per guild. `AudioService._guilds` maps each guild ID to a `GuildAudio`, which holds that guild's `SunoPlayer` (queue, AudioPlayer, player message), `VoiceConnection` and `PlayerSubscription`.
+  - A `GuildAudio` is created on the guild's first command and is never removed.
+  - Command handlers get their guild's player through `handleInteraction`, so new commands should use that player too, rather than adding state to `AudioService`.
+  - `SunoService` and the local cache are shared across guilds.
+- `leaveVoiceChannel(guildId)` can be called twice: `stop()` calls it, then the player going idle calls it again. It must stay idempotent.
+- The auto-reconnect only acts if the connection that dropped is still the guild's current one.
 - `AudioService.handleInteraction` wraps every queue command:
   1. Defer an ephemeral reply.
   2. Run the action.
