@@ -13,6 +13,9 @@
 > [!CAUTION]
 > As SUNO made changes to it's login system, a captcha is now mandatory, so song/lyrics generation feature was removed.
 
+> [!NOTE]
+> Since September 2026, SUNO encrypts its audio streams. The bot plays the audio track of the song's public video instead, so songs without a rendered video can't be played.
+
 SUNO Discord Bot is a versatile music bot designed to play SUNO music directly in your Discord server. Simply provide a SUNO URL, and the bot will play the music for you. The bot also allows you to manage the music queue with commands to add, remove, skip, pause, resume, and stop music. Additionally, you can search and save local SUNO music. ~~It can also generate lyrics and song if you provide a `OPENAI_API_KEY`~~
 
 ## Features
@@ -28,8 +31,8 @@ SUNO Discord Bot is a versatile music bot designed to play SUNO music directly i
 
 | Command      | Description                   | Options                                                                                          |
 |--------------|-------------------------------|--------------------------------------------------------------------------------------------------|
-| `profile`    | Search a SUNO profile by handle     | - `suno_profile`: (Required) Searched profile, with autocomplete based on local profiles already saved. *UNUSED IF `SHOULD_SAVE_LOCALY` IS FALSE*                                                              |
-| `play`       | Play a SUNO music             | - `suno_url`: (Required) a SUNO URL                                                                     |
+| `profile`    | Search a SUNO profile by handle     | - `suno_profile`: (Required) Searched profile (handle, `@handle` or profile link), with autocomplete based on local profiles already saved. *UNUSED IF `SHOULD_SAVE_LOCALY` IS FALSE*                                                              |
+| `play`       | Play a SUNO music             | - `suno_url`: (Required) a SUNO song link, share link (`suno.com/s/...`) or song ID                     |
 | `skip`       | Skip a sound                  | None                                                                                             |
 | `pause`      | Pause sound                   | None                                                                                             |
 | `resume`     | Resume sound                  | None                                                                                             |
@@ -49,9 +52,11 @@ To configure the SUNO Discord Bot, you need to set the following environment var
 - **Optional:**
   - ~~`OPENAI_API_KEY`: API key from Open AI, required if you want the bot to generate lyrics and songs.~~
   - ~~`OPENAI_PROMPT`: Prompt to generate the lyrics, use `${lang}` as a variable to add the selected language from `OPENAI_API_KEY`.~~
-  - `SHOULD_SAVE_LOCALY`: Defines if SUNO musics should be saved localy or only remain on the web.
+  - `SHOULD_SAVE_LOCALY`: Defines if SUNO musics should be saved localy or only remain on the web. Default is `true`, set it to `false` to disable.
   - `SAVED_DATA_PATH`: Defines the path where all suno data will be stored on the server. Default is `./suno`. *UNUSED IF `SHOULD_SAVE_LOCALY` IS `False`*
   - `LOG_LEVEL`: Defines the logging level of the Bot. Default is `warning`.
+
+Running it outside Docker requires Node.js 22.12+ and [FFmpeg](https://ffmpeg.org/) on the `PATH`. A `.env` file placed in `src/env/` is loaded automatically when running from source (`npm run dev`).
 
 A Docker image is also available via [Docker Hub](https://hub.docker.com/r/pekno/sunobot).
 

@@ -60,7 +60,10 @@ export class SunoProfile extends SunoClipList {
 		interaction: CommandInteraction
 	): Promise<void> => {
 		await super.sendPaginatedDiscordResponse(interaction);
-		for (const playlist of this.playlists) {
+		// Playlists that failed to load or are empty would only add noise
+		for (const playlist of (this.playlists ?? []).filter(
+			(p) => p.display_clips.length
+		)) {
 			await playlist.sendPaginatedDiscordResponse(interaction);
 		}
 	};

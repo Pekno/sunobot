@@ -30,19 +30,19 @@ jobs:
       
       # Set up Node.js
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: '18' # Replace with your desired Node.js version
+          node-version: '24'
 
       # Install dependencies and build the project
       - name: Install and Build
         run: |
-          npm install
+          npm ci
           npm run build
         
       # Log in to Docker Hub or GitHub Container Registry
       - name: Log in to Docker Hub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}

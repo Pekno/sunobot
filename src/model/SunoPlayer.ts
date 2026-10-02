@@ -32,7 +32,13 @@ export class SunoPlayer {
 		}
 
 		this._currentSunoClip = this._sunoQueue.shift();
-		this.audioPlayer.play(this._currentSunoClip.audioResource);
+		try {
+			this.audioPlayer.play(this._currentSunoClip.audioResource);
+		} catch (e) {
+			// Runs inside the AudioPlayer state listener, so skip the clip rather than throw
+			Loggers.get().error(e);
+			this.next();
+		}
 	};
 
 	play = (sunoClip: SunoClip) => {

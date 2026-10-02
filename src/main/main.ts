@@ -7,7 +7,6 @@ import {
 } from 'discord.js';
 import { AudioService } from '../services/AudioService';
 import { CONFIG } from '../config/config';
-import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import i18n from 'i18n';
@@ -20,6 +19,9 @@ import {
 	Loggers,
 	SimpleDiscordBot,
 } from '@pekno/simple-discordbot';
+
+const logger = Loggers.get();
+logger.level = CONFIG.LOG_LEVEL in logger.levels ? CONFIG.LOG_LEVEL : 'warn';
 
 const localesPath = path.resolve(__dirname, '../locales');
 const files = fs.readdirSync(localesPath);
@@ -37,7 +39,6 @@ if (!localList.includes(CONFIG.LOCALE.toLowerCase()))
 	});
 i18n.setLocale(CONFIG.LOCALE.toLowerCase());
 Loggers.get().info(`LOCALE : ${CONFIG.LOCALE.toUpperCase()}`);
-dotenv.config({ path: path.resolve(__dirname, '../env/.env') });
 
 const audioService = new AudioService();
 const simpleBot = new SimpleDiscordBot<AudioService>(
@@ -61,7 +62,7 @@ simpleCommandsList
 			options: [
 				new CommandOption({
 					name: 'suno_url',
-					description: 'complete suno url',
+					description: 'suno song link, share link (suno.com/s/...) or song id',
 					type: ApplicationCommandOptionType.String,
 					required: true,
 				}),
@@ -72,9 +73,8 @@ simpleCommandsList
 				audioService: AudioService,
 				extraInfo: string
 			) => {
-				const sunoUrl = extraInfo
-					? `https://suno.com/song/${extraInfo}`
-					: interaction.options.getString('suno_url');
+				// extraInfo is the song id picked in a PaginatedEmbed select menu
+				const sunoUrl = extraInfo || interaction.options.getString('suno_url');
 				await audioService.play(interaction, sunoUrl);
 			},
 		})
@@ -155,7 +155,7 @@ simpleCommandsList
 			options: [
 				new CommandOption({
 					name: 'suno_profile',
-					description: 'profile',
+					description: 'profile handle, @handle or profile link',
 					type: ApplicationCommandOptionType.String,
 					required: true,
 					autocomplete: true,
@@ -175,5 +175,7 @@ simpleCommandsList
 audioService.start().then(() => {
 	simpleBot.start(simpleCommandsList).catch((e: any) => {
 		Loggers.get().error(e, e.stack);
+		// Let Docker restart policies and CI notice a bot that couldn't log in
+		process.exitCode = 1;
 	});
 });

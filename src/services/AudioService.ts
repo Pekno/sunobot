@@ -2,6 +2,7 @@ import {
 	AutocompleteInteraction,
 	CommandInteraction,
 	InteractionEditReplyOptions,
+	MessageFlags,
 	MessagePayload,
 	ModalSubmitInteraction,
 	TextChannel,
@@ -55,7 +56,7 @@ export class AudioService {
 			)) as TextChannel
 		);
 
-		const existingConnection = getVoiceConnection(voiceChannelId);
+		const existingConnection = getVoiceConnection(guildId);
 		this._connection =
 			existingConnection ||
 			joinVoiceChannel({
@@ -123,7 +124,7 @@ export class AudioService {
 			onDeleteCallback?: () => void;
 		}>
 	): Promise<void> => {
-		await interaction.deferReply({ ephemeral: true });
+		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 		const {
 			performedAction,
 			preventForceJoinVC,
@@ -151,10 +152,12 @@ export class AudioService {
 	play = async (interaction: CommandInteraction, sunoUrl: string | null) => {
 		await this.handleInteraction(interaction, async () => {
 			if (!sunoUrl) throw new LocaleError('error.audio.no_suno_url');
-			const sunoId = this.extractSunoIdFromURL(sunoUrl);
+			const sunoId = await this._sunoService.resolveClipId(sunoUrl);
 			if (!sunoId) throw new LocaleError('error.audio.no_suno_id');
 
 			const sunoClip = await this._sunoService.getClip(sunoId);
+			if (!(await this._sunoService.isPlayable(sunoClip)))
+				throw new LocaleError('error.audio.no_audio_url');
 			this._sunoPlayer.play(sunoClip);
 
 			return {
@@ -223,28 +226,17 @@ export class AudioService {
 		interaction: AutocompleteInteraction,
 		filter: string
 	) => {
-		interaction.respond(this._sunoService.getProfileAutocomplete(filter));
+		await interaction.respond(this._sunoService.getProfileAutocomplete(filter));
 	};
 
 	profile = async (
 		interaction: CommandInteraction,
 		profileName: string | null
 	) => {
-		await interaction.deferReply({ ephemeral: true });
+		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 		if (!profileName)
 			throw new LocaleError('error.audio.missing_field_profile');
 		const sunoProfile = await this._sunoService.profile(profileName);
 		await sunoProfile.sendPaginatedDiscordResponse(interaction);
-	};
-
-	private extractSunoIdFromURL = (url: string) => {
-		const sunoThreadRegex = /^https:\/\/suno\.com\/song\/(([a-z0-9]+|-)+)/i;
-		const match = url.match(sunoThreadRegex);
-
-		if (match) {
-			return match[1];
-		} else {
-			return null;
-		}
 	};
 }

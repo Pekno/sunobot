@@ -1,16 +1,20 @@
 import { CONFIG } from '../config/config';
 import fs from 'fs';
 import path from 'path';
-import { LocalSunoClip, SunoClip } from '../model/SunoClip';
+import {
+	LOCAL_AUDIO_EXTENSIONS,
+	LocalSunoClip,
+	SunoClip,
+} from '../model/SunoClip';
 import axios from 'axios';
 import { SunoProfile } from '../model/SunoProfile';
-import { SunoService } from './SunoService';
+import { SunoApi } from '../api/sunoApi';
 import { LocaleError, Loggers } from '@pekno/simple-discordbot';
 export class LocalAudioFileService {
-	private _sunoService: SunoService;
+	private _sunoApi: SunoApi;
 
-	constructor(sunoApi: SunoService) {
-		this._sunoService = sunoApi;
+	constructor(sunoApi: SunoApi) {
+		this._sunoApi = sunoApi;
 		if (!fs.existsSync(CONFIG.SAVED_DATA_PATH)) {
 			Loggers.get().info(
 				`LOCAL_AUDIO : Create Folder - ${CONFIG.SAVED_DATA_PATH}`
@@ -19,17 +23,16 @@ export class LocalAudioFileService {
 		}
 	}
 
-	// Used when you got {ID}.mp3 files and you want to get the {ID}.json data
+	// Used when you got {ID}.mp4 / {ID}.mp3 files and you want to get the {ID}.json data
 	ForceLoadClipsInfo = async () => {
 		const files = fs.readdirSync(CONFIG.SAVED_DATA_PATH);
 
-		for (const file of files.filter(
-			(file) => path.extname(file).toLowerCase() === '.mp3'
+		for (const file of files.filter((file) =>
+			LOCAL_AUDIO_EXTENSIONS.includes(path.extname(file).toLowerCase())
 		)) {
-			Loggers.get().info(
-				`LOCAL_AUDIO : Grabbing SunoClip Info - ${file.replace('.mp3', '')}`
-			);
-			const clip = await this._sunoService.getClip(file.replace('.mp3', ''));
+			const sunoId = path.parse(file).name;
+			Loggers.get().info(`LOCAL_AUDIO : Grabbing SunoClip Info - ${sunoId}`);
+			const clip = await this._sunoApi.getClip(sunoId);
 			await this.saveClip(clip);
 		}
 	};
@@ -122,22 +125,21 @@ export class LocalAudioFileService {
 			clip: SunoClip,
 			retries: number
 		): Promise<void> => {
-			// Check if the audio_url is valid (ends with .mp3)
-			const validAudioUrl = clip.audio_url.endsWith('.mp3');
+			// Clips still being generated, or whose video isn't rendered yet, have nothing to save
+			const audioUrl = clip.status === 'complete' ? clip.remoteAudioUrl : null;
 
-			if (validAudioUrl) {
+			if (audioUrl && (await this._sunoApi.isAvailable(audioUrl))) {
 				// If valid, proceed to download and save the clip
 				const result = await axios.request({
 					responseType: 'arraybuffer',
-					url: clip.audio_url,
+					url: audioUrl,
 					method: 'get',
-					headers: {
-						'Content-Type': 'audio/mp3',
-					},
 				});
+				const extension =
+					path.extname(new URL(audioUrl).pathname).toLowerCase() || '.mp4';
 				const savePath = this.makeprofileDir(sunoClip.handle);
 				// Save the audio and metadata files
-				fs.writeFileSync(`${savePath}/${clip.id}.mp3`, result.data);
+				fs.writeFileSync(`${savePath}/${clip.id}${extension}`, result.data);
 				fs.writeFileSync(`${savePath}/${clip.id}.json`, JSON.stringify(clip));
 				Loggers.get().info(
 					`LOCAL_AUDIO : ${clip.id} - Audio URL is valid, Saved`
@@ -155,9 +157,13 @@ export class LocalAudioFileService {
 					// Wait for the delay and then recursively call retrySaveClip
 					return new Promise<void>((resolve) => {
 						setTimeout(async () => {
-							// Refresh the SunoClip data by calling getClip
-							const refreshedClip = await this._sunoService.getClip(clip.id);
-							await retrySaveClip(refreshedClip, retries + 1); // Retry the operation
+							try {
+								// Refresh straight from the API, SunoService.getClip would start another save
+								const refreshedClip = await this._sunoApi.getClip(clip.id);
+								await retrySaveClip(refreshedClip, retries + 1); // Retry the operation
+							} catch (e: any) {
+								Loggers.get().error(e.message);
+							}
 							resolve();
 						}, RETRY_DELAY_MS);
 					});
@@ -182,20 +188,22 @@ export class LocalAudioFileService {
 
 	// TODO: improve, because it will get profilelist on autocomplete filter
 	getProfileList = (filter?: string): SunoProfile[] => {
-		let dirList = fs.readdirSync(`${CONFIG.SAVED_DATA_PATH}`);
-		if (filter)
-			dirList = dirList.filter((profile) =>
-				profile.startsWith(filter.toLocaleLowerCase())
-			);
-		return dirList.map(
-			(dir) =>
-				new SunoProfile(
-					JSON.parse(
-						fs.readFileSync(
-							`${CONFIG.SAVED_DATA_PATH}/${dir}/profile.json`,
-							'utf8'
-						)
-					)
+		const search = filter?.toLowerCase() ?? '';
+		return (
+			fs
+				.readdirSync(CONFIG.SAVED_DATA_PATH, { withFileTypes: true })
+				.filter(
+					(entry) =>
+						entry.isDirectory() && entry.name.toLowerCase().startsWith(search)
+				)
+				.map((entry) =>
+					path.join(CONFIG.SAVED_DATA_PATH, entry.name, 'profile.json')
+				)
+				// Folders created by /play only hold clips, profile.json is written by /profile
+				.filter((profilePath) => fs.existsSync(profilePath))
+				.map(
+					(profilePath) =>
+						new SunoProfile(JSON.parse(fs.readFileSync(profilePath, 'utf8')))
 				)
 		);
 	};
