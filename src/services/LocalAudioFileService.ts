@@ -208,31 +208,24 @@ export class LocalAudioFileService {
 		);
 	};
 
+	// Runs synchronously on every /play, so it costs a few syscalls per folder rather than a stat per cached file,
+	// a slow walk blocks the event loop and Discord drops interactions not acknowledged within 3 s
 	private findFileInDirectory = (
 		dirPath: string,
 		fileName: string
 	): string | null => {
-		// Read the contents of the directory
-		const filesAndDirs = fs.readdirSync(dirPath);
+		const candidate = path.join(dirPath, fileName);
+		if (fs.existsSync(candidate)) return candidate;
 
-		// Iterate over the contents
-		for (const fileOrDir of filesAndDirs) {
-			const fullPath = path.join(dirPath, fileOrDir);
-
-			// Check if the current path is a directory
-			if (fs.statSync(fullPath).isDirectory()) {
-				// Recursively search in this directory
-				const result = this.findFileInDirectory(fullPath, fileName);
-				if (result) {
-					return result; // Return the result if found
-				}
-			} else if (fileOrDir === fileName) {
-				// If the file is found, return its full path
-				return fullPath;
-			}
+		for (const entry of fs.readdirSync(dirPath, { withFileTypes: true })) {
+			if (!entry.isDirectory()) continue;
+			const result = this.findFileInDirectory(
+				path.join(dirPath, entry.name),
+				fileName
+			);
+			if (result) return result;
 		}
 
-		// Return null if the file was not found in this directory or its subdirectories
 		return null;
 	};
 }

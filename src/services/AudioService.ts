@@ -148,6 +148,12 @@ export class AudioService {
 			onDeleteCallback?: () => void;
 		}>
 	): Promise<void> => {
+		// Discord forgets interactions not acknowledged within 3 s (DiscordAPIError 10062), log late ones to see why
+		const age = Date.now() - interaction.createdTimestamp;
+		if (age > 2_000)
+			Loggers.get().warn(
+				`AUDIO SERVICE : ${interaction.id} handled ${age} ms after it was sent`
+			);
 		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 		const { player } = this.getGuildAudio(interaction.guildId);
 		const {
