@@ -19,6 +19,7 @@ import {
 } from '@discordjs/voice';
 import { SunoPlayer } from '../model/SunoPlayer';
 import { LocaleError, Loggers } from '@pekno/simple-discordbot';
+import { CONFIG } from '../config/config';
 
 // Playback state of one Discord server, so servers don't share a queue, player message or voice connection
 interface GuildAudio {
@@ -31,7 +32,15 @@ export class AudioService {
 	private _sunoService: SunoService;
 	private _guilds = new Map<string, GuildAudio>();
 
+	private audioContext: AudioContext;
+	private gainNode: GainNode;
+
 	constructor() {
+		this.audioContext = new AudioContext();
+		this.gainNode = this.audioContext.createGain();
+		this.gainNode.gain.value = CONFIG.AUDIO.defaultVolume;
+		this.gainNode.connect(this.audioContext.destination);
+
 		this._sunoService = new SunoService();
 	}
 

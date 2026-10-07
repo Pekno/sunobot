@@ -1,3 +1,4 @@
+/// <reference lib="dom" />
 import { AudioPlayer, AudioPlayerStatus } from '@discordjs/voice';
 import { SunoQueue } from './SunoQueue';
 import { SunoClip } from './SunoClip';

@@ -17,8 +17,11 @@ export const CONFIG = {
 	DISCORD_TOKEN: process.env.DISCORD_TOKEN,
 	SHOULD_SAVE_LOCALY: parseBoolean(process.env.SHOULD_SAVE_LOCALY, true),
 	SAVED_DATA_PATH: process.env.SAVED_DATA_PATH ?? './suno',
+	LOG_LEVEL: process.env.LOG_LEVEL?.toLowerCase() ?? 'warning',
+	AUDIO: {
+		defaultVolume: 0.5,
+	},
 	// winston names it "warn", the README documents "warning"
-	LOG_LEVEL: logLevel === 'warning' ? 'warn' : logLevel,
 	PAGE_SIZE: 25,
 	AVAILABLE_LOCAL: ['fr', 'en'],
 };
