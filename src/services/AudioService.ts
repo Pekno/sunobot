@@ -18,6 +18,7 @@ import {
 } from '@discordjs/voice';
 import { SunoPlayer } from '../model/SunoPlayer';
 import { LocaleError, Loggers } from '@pekno/simple-discordbot';
+import { CONFIG } from '../config/config';
 
 export class AudioService {
 	private _sunoPlayer: SunoPlayer;
@@ -25,9 +26,18 @@ export class AudioService {
 	private _connection: VoiceConnection;
 	private _audioSubscription: PlayerSubscription | undefined;
 
+	private audioContext: AudioContext;
+	private gainNode: GainNode;
+
 	constructor() {
+		this.audioContext = new AudioContext();
+		this.gainNode = this.audioContext.createGain();
+		this.gainNode.gain.value = CONFIG.AUDIO.defaultVolume;
+		this.gainNode.connect(this.audioContext.destination);
+
 		this._sunoService = new SunoService();
 		this._sunoPlayer = new SunoPlayer(this.leaveVoiceChannel);
+		this._sunoPlayer.setGainNode(this.gainNode);
 	}
 
 	public start = async () => {
