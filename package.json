@@ -1,50 +1,42 @@
 {
   "name": "suno-bot",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Discord bot to read suno musics",
-  "main": "./src/main/main.ts",
+  "main": "./dist/main/main.js",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
+    "dev": "tsx src/main/main.ts",
+    "start": "node dist/main/main.js",
+    "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc && node -e \"require('fs').cpSync('src/locales','dist/locales',{recursive:true})\"",
+    "typecheck": "tsc --noEmit",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc --build && scp -r src/locales dist/locales",
-    "lint": "eslint 'src/**/*.{js,ts}'",
-    "lint:fix": "eslint 'src/**/*.{js,ts}' --fix",
-    "format": "prettier --write 'src/**/*.{js,ts,json,css,md}'"
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "format": "prettier --write src",
+    "format:check": "prettier --check src"
   },
   "author": "Pekn0",
   "license": "MIT",
   "dependencies": {
-    "@discordjs/voice": "^0.17.0",
+    "@discordjs/voice": "^0.19.2",
     "@pekno/simple-discordbot": "^0.0.5",
-    "@types/user-agents": "^1.0.4",
-    "axios": "^1.7.2",
-    "axios-cookiejar-support": "^5.0.3",
-    "discord.js": "^14.16.3",
-    "dotenv": "^16.4.5",
-    "fs": "^0.0.1-security",
-    "got": "^11.8.2",
-    "i18n": "^0.15.1",
-    "libsodium-wrappers": "^0.7.15",
-    "tough-cookie": "^5.0.0",
-    "user-agents": "^1.1.325",
-    "uuid": "^10.0.0",
-    "winston": "^3.15.0",
-    "winston-daily-rotate-file": "^5.0.0",
-    "zod": "^3.23.8"
+    "axios": "^1.20.0",
+    "discord.js": "^14.27.0",
+    "dotenv": "^18.0.5",
+    "i18n": "^0.15.4",
+    "libsodium-wrappers": "^0.8.4",
+    "user-agents": "^2.1.201"
   },
   "devDependencies": {
-    "@eslint/js": "^9.11.1",
-    "@types/eslint__js": "^8.42.3",
+    "@eslint/js": "^10.0.1",
     "@types/i18n": "^0.13.12",
-    "@types/uuid": "^10.0.0",
-    "@typescript-eslint/eslint-plugin": "^8.7.0",
-    "@typescript-eslint/parser": "^8.7.0",
-    "eslint": "^9.11.1",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-prettier": "^5.2.1",
-    "globals": "^15.9.0",
-    "prettier": "^3.3.3",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.6.2",
-    "typescript-eslint": "^8.7.0"
+    "@types/node": "^24.19.1",
+    "eslint": "^10.11.0",
+    "prettier": "^3.9.9",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.71.0"
   }
 }

@@ -6,13 +6,14 @@ import {
 } from 'discord.js';
 import { SunoClipMetadata } from './SunoClipMetadata';
 import { CONFIG } from '../config/config';
-import got from 'got';
+import fs from 'fs';
 import i18n from 'i18n';
 import { Loggers } from '@pekno/simple-discordbot';
 
 export class SunoClip {
 	id: string;
 	video_url: string;
+	// Since 2026 Suno sends a ".../api/forbidden" placeholder here
 	audio_url: string;
 	image_url: string;
 	image_large_url: string;
@@ -34,8 +35,17 @@ export class SunoClip {
 	upvote_count: number;
 	is_public: boolean;
 
-	get streamUrl(): string {
-		return this.audio_url;
+	// The audio files listed in media_urls are encrypted ("encoding": "1.0.0") and only Suno's
+	// web player can decode them, but the public video mp4 still carries a plain AAC audio track
+	get remoteAudioUrl(): string | null {
+		if (this.video_url) return this.video_url;
+		if (this.audio_url && !this.audio_url.includes('/api/forbidden'))
+			return this.audio_url;
+		return null;
+	}
+
+	get streamUrl(): string | null {
+		return this.remoteAudioUrl;
 	}
 
 	get realTitle(): string {
@@ -84,12 +94,12 @@ export class SunoClip {
 	}
 
 	get audioResource(): AudioResource<null> {
-		Loggers.get().info(
-			`CLIP : Creating Audio Source Stream from : ${this.streamUrl}`
-		);
-		return createAudioResource(
-			this.isLocal ? this.streamUrl : got.stream(this.streamUrl)
-		);
+		const source = this.streamUrl;
+		if (!source) throw new Error(`No playable audio for clip ${this.id}`);
+		Loggers.get().info(`CLIP : Creating Audio Source Stream from : ${source}`);
+		// FFmpeg reads local paths and URLs alike, keeps only the audio track,
+		// and needs a seekable input for mp4 containers (a piped stream isn't)
+		return createAudioResource(source);
 	}
 
 	public buildEmbed = (): EmbedBuilder => {
@@ -132,12 +142,23 @@ export class SunoClip {
 	};
 }
 
+// .mp4 is the current cache format, .mp3 files come from before Suno's 2026 changes
+export const LOCAL_AUDIO_EXTENSIONS = ['.mp4', '.mp3'];
+
 export class LocalSunoClip extends SunoClip {
-	get streamUrl(): string {
-		return `${CONFIG.SAVED_DATA_PATH}/${this.handle}/${this.id}.mp3`;
+	get localAudioPath(): string | null {
+		return (
+			LOCAL_AUDIO_EXTENSIONS.map(
+				(ext) => `${CONFIG.SAVED_DATA_PATH}/${this.handle}/${this.id}${ext}`
+			).find((p) => fs.existsSync(p)) ?? null
+		);
+	}
+
+	get streamUrl(): string | null {
+		return this.localAudioPath ?? this.remoteAudioUrl;
 	}
 
 	get isLocal(): boolean {
-		return true;
+		return !!this.localAudioPath;
 	}
 }

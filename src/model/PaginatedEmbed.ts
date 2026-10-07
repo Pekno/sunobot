@@ -9,6 +9,7 @@ import {
 	StringSelectMenuBuilder,
 	BaseMessageOptions,
 	CommandInteraction,
+	MessageFlags,
 	StringSelectMenuOptionBuilder,
 } from 'discord.js';
 import { SunoClipList } from './SunoClipList';
@@ -27,6 +28,12 @@ export class PaginatedEmbed<T extends SunoClipList> {
 	}
 
 	private createEmbeds() {
+		if (!this.clipList.display_clips.length) {
+			// Discord rejects a message without embed or a select menu without options
+			this.embeds.push(this.clipList.buildBaseEmbed().setTimestamp());
+			this.options.push([]);
+			return;
+		}
 		const chunkSize = 25; // Discord's maximum fields per embed
 		for (let i = 0; i < this.clipList.display_clips.length; i += chunkSize) {
 			const chunk = this.clipList.display_clips.slice(i, i + chunkSize);
@@ -55,7 +62,7 @@ export class PaginatedEmbed<T extends SunoClipList> {
 		} else {
 			message = await mainInteraction.followUp({
 				...response,
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 		this.createCollector(mainInteraction, message);
@@ -112,11 +119,13 @@ export class PaginatedEmbed<T extends SunoClipList> {
 				)
 			);
 		}
-		rows.push(
-			new ActionRowBuilder<
-				ButtonBuilder | StringSelectMenuBuilder
-			>().addComponents(this.createSelectMenu())
-		);
+		if (this.options[this.currentPage].length) {
+			rows.push(
+				new ActionRowBuilder<
+					ButtonBuilder | StringSelectMenuBuilder
+				>().addComponents(this.createSelectMenu())
+			);
+		}
 
 		return rows;
 	}

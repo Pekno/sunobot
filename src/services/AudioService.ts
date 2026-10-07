@@ -2,6 +2,7 @@ import {
 	AutocompleteInteraction,
 	CommandInteraction,
 	InteractionEditReplyOptions,
+	MessageFlags,
 	MessagePayload,
 	ModalSubmitInteraction,
 	TextChannel,
@@ -20,11 +21,16 @@ import { SunoPlayer } from '../model/SunoPlayer';
 import { LocaleError, Loggers } from '@pekno/simple-discordbot';
 import { CONFIG } from '../config/config';
 
+// Playback state of one Discord server, so servers don't share a queue, player message or voice connection
+interface GuildAudio {
+	player: SunoPlayer;
+	connection?: VoiceConnection;
+	subscription?: PlayerSubscription;
+}
+
 export class AudioService {
-	private _sunoPlayer: SunoPlayer;
 	private _sunoService: SunoService;
-	private _connection: VoiceConnection;
-	private _audioSubscription: PlayerSubscription | undefined;
+	private _guilds = new Map<string, GuildAudio>();
 
 	private audioContext: AudioContext;
 	private gainNode: GainNode;
@@ -36,12 +42,22 @@ export class AudioService {
 		this.gainNode.connect(this.audioContext.destination);
 
 		this._sunoService = new SunoService();
-		this._sunoPlayer = new SunoPlayer(this.leaveVoiceChannel);
-		this._sunoPlayer.setGainNode(this.gainNode);
 	}
 
 	public start = async () => {
 		await this._sunoService.init();
+	};
+
+	private getGuildAudio = (guildId: string | null): GuildAudio => {
+		if (!guildId) throw new LocaleError('error.audio.missing_guildId');
+		let guildAudio = this._guilds.get(guildId);
+		if (!guildAudio) {
+			guildAudio = {
+				player: new SunoPlayer(() => this.leaveVoiceChannel(guildId)),
+			};
+			this._guilds.set(guildId, guildAudio);
+		}
+		return guildAudio;
 	};
 
 	private joinVoiceChannel = async (interaction: CommandInteraction) => {
@@ -59,73 +75,81 @@ export class AudioService {
 		if (!voiceChannelId)
 			throw new LocaleError('error.audio.missing_voice_channelId');
 
-		await this._sunoPlayer.bindToChannel(
+		const guildAudio = this.getGuildAudio(guildId);
+		await guildAudio.player.bindToChannel(
 			(await interaction.channel?.client.channels.fetch(
 				interaction.channelId
 			)) as TextChannel
 		);
 
-		const existingConnection = getVoiceConnection(voiceChannelId);
-		this._connection =
-			existingConnection ||
+		const connection =
+			getVoiceConnection(guildId) ||
 			joinVoiceChannel({
 				channelId: voiceChannelId,
 				guildId,
 				adapterCreator:
 					guild.voiceAdapterCreator as DiscordGatewayAdapterCreator,
 			});
+		guildAudio.connection = connection;
 
-		this.bindConnectionEvent(interaction);
+		this.bindConnectionEvent(guildId, connection, interaction);
 
 		Loggers.get().info(
-			`AUDIO SERVICE : JOIN VOICE CHANNEL - ${voiceChannelId}`
+			`AUDIO SERVICE : JOIN VOICE CHANNEL - ${guildId} > ${voiceChannelId}`
 		);
 	};
 
-	private bindConnectionEvent = (interaction: CommandInteraction) => {
+	private bindConnectionEvent = (
+		guildId: string,
+		connection: VoiceConnection,
+		interaction: CommandInteraction
+	) => {
+		const guildAudio = this.getGuildAudio(guildId);
 		// Bind audio player when connection is ready
-		this._connection.removeAllListeners(VoiceConnectionStatus.Ready);
-		this._connection.on(VoiceConnectionStatus.Ready, () => {
-			this._audioSubscription = this._connection.subscribe(
-				this._sunoPlayer.audioPlayer
+		connection.removeAllListeners(VoiceConnectionStatus.Ready);
+		connection.on(VoiceConnectionStatus.Ready, () => {
+			guildAudio.subscription = connection.subscribe(
+				guildAudio.player.audioPlayer
 			);
 		});
 		// Try to reconnect in case of disconnection, if can't destroy
-		this._connection.removeAllListeners(VoiceConnectionStatus.Disconnected);
-		this._connection.on(VoiceConnectionStatus.Disconnected, async () => {
+		connection.removeAllListeners(VoiceConnectionStatus.Disconnected);
+		connection.on(VoiceConnectionStatus.Disconnected, async () => {
 			try {
-				Loggers.get().warn(`Problems with connection`);
+				Loggers.get().warn(`Problems with connection - ${guildId}`);
 				await Promise.race([
-					entersState(
-						this._connection,
-						VoiceConnectionStatus.Signalling,
-						5_000
-					),
-					entersState(
-						this._connection,
-						VoiceConnectionStatus.Connecting,
-						5_000
-					),
+					entersState(connection, VoiceConnectionStatus.Signalling, 5_000),
+					entersState(connection, VoiceConnectionStatus.Connecting, 5_000),
 				]);
 			} catch (error) {
 				Loggers.get().error(error);
-				this.leaveVoiceChannel();
-				this.joinVoiceChannel(interaction);
+				// A newer connection may already have replaced this one
+				if (guildAudio.connection !== connection) return;
+				this.leaveVoiceChannel(guildId);
+				// Runs outside of any interaction handler, an unhandled rejection would stop the bot for every server
+				this.joinVoiceChannel(interaction).catch((e) => Loggers.get().error(e));
 			}
 		});
 	};
 
-	private leaveVoiceChannel = () => {
-		this._connection.destroy();
-		if (this._audioSubscription) {
-			this._audioSubscription.unsubscribe();
-		}
-		Loggers.get().info(`AUDIO SERVICE : LEFT VOICE CHANNEL`);
+	private leaveVoiceChannel = (guildId: string) => {
+		const guildAudio = this._guilds.get(guildId);
+		if (!guildAudio) return;
+		guildAudio.subscription?.unsubscribe();
+		guildAudio.subscription = undefined;
+		// Both stop() and the player going idle ask to leave, a connection can only be destroyed once
+		if (
+			guildAudio.connection &&
+			guildAudio.connection.state.status !== VoiceConnectionStatus.Destroyed
+		)
+			guildAudio.connection.destroy();
+		guildAudio.connection = undefined;
+		Loggers.get().info(`AUDIO SERVICE : LEFT VOICE CHANNEL - ${guildId}`);
 	};
 
-	private handleInteraction = async <T>(
+	private handleInteraction = async (
 		interaction: CommandInteraction | ModalSubmitInteraction,
-		action: (params?: T) => Promise<{
+		action: (sunoPlayer: SunoPlayer) => Promise<{
 			performedAction: boolean;
 			preventForceJoinVC: boolean;
 			message: string | MessagePayload | InteractionEditReplyOptions;
@@ -133,14 +157,15 @@ export class AudioService {
 			onDeleteCallback?: () => void;
 		}>
 	): Promise<void> => {
-		await interaction.deferReply({ ephemeral: true });
+		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+		const { player } = this.getGuildAudio(interaction.guildId);
 		const {
 			performedAction,
 			preventForceJoinVC,
 			message,
 			deleteTimeout,
 			onDeleteCallback,
-		} = await action();
+		} = await action(player);
 		if (performedAction) {
 			// Prevent joining again a VC in case the action can cause leaving
 			if (!preventForceJoinVC || interaction instanceof ModalSubmitInteraction)
@@ -159,13 +184,15 @@ export class AudioService {
 	};
 
 	play = async (interaction: CommandInteraction, sunoUrl: string | null) => {
-		await this.handleInteraction(interaction, async () => {
+		await this.handleInteraction(interaction, async (sunoPlayer) => {
 			if (!sunoUrl) throw new LocaleError('error.audio.no_suno_url');
-			const sunoId = this.extractSunoIdFromURL(sunoUrl);
+			const sunoId = await this._sunoService.resolveClipId(sunoUrl);
 			if (!sunoId) throw new LocaleError('error.audio.no_suno_id');
 
 			const sunoClip = await this._sunoService.getClip(sunoId);
-			this._sunoPlayer.play(sunoClip);
+			if (!(await this._sunoService.isPlayable(sunoClip)))
+				throw new LocaleError('error.audio.no_audio_url');
+			sunoPlayer.play(sunoClip);
 
 			return {
 				performedAction: true,
@@ -178,8 +205,8 @@ export class AudioService {
 	};
 
 	skip = async (interaction: CommandInteraction) => {
-		await this.handleInteraction(interaction, async () => {
-			const performedAction = await this._sunoPlayer.skip();
+		await this.handleInteraction(interaction, async (sunoPlayer) => {
+			const performedAction = await sunoPlayer.skip();
 			return {
 				performedAction,
 				preventForceJoinVC: true,
@@ -191,8 +218,8 @@ export class AudioService {
 	};
 
 	pause = async (interaction: CommandInteraction) => {
-		await this.handleInteraction(interaction, async () => {
-			const performedAction = await this._sunoPlayer.pause();
+		await this.handleInteraction(interaction, async (sunoPlayer) => {
+			const performedAction = await sunoPlayer.pause();
 			return {
 				performedAction,
 				preventForceJoinVC: false,
@@ -204,8 +231,8 @@ export class AudioService {
 	};
 
 	resume = async (interaction: CommandInteraction) => {
-		await this.handleInteraction(interaction, async () => {
-			const performedAction = await this._sunoPlayer.resume();
+		await this.handleInteraction(interaction, async (sunoPlayer) => {
+			const performedAction = await sunoPlayer.resume();
 			return {
 				performedAction,
 				preventForceJoinVC: false,
@@ -217,8 +244,8 @@ export class AudioService {
 	};
 
 	stop = async (interaction: CommandInteraction) => {
-		await this.handleInteraction(interaction, async () => {
-			const performedAction = await this._sunoPlayer.stop();
+		await this.handleInteraction(interaction, async (sunoPlayer) => {
+			const performedAction = await sunoPlayer.stop();
 			return {
 				performedAction,
 				preventForceJoinVC: true,
@@ -233,28 +260,17 @@ export class AudioService {
 		interaction: AutocompleteInteraction,
 		filter: string
 	) => {
-		interaction.respond(this._sunoService.getProfileAutocomplete(filter));
+		await interaction.respond(this._sunoService.getProfileAutocomplete(filter));
 	};
 
 	profile = async (
 		interaction: CommandInteraction,
 		profileName: string | null
 	) => {
-		await interaction.deferReply({ ephemeral: true });
+		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 		if (!profileName)
 			throw new LocaleError('error.audio.missing_field_profile');
 		const sunoProfile = await this._sunoService.profile(profileName);
 		await sunoProfile.sendPaginatedDiscordResponse(interaction);
-	};
-
-	private extractSunoIdFromURL = (url: string) => {
-		const sunoThreadRegex = /^https:\/\/suno\.com\/song\/(([a-z0-9]+|-)+)/i;
-		const match = url.match(sunoThreadRegex);
-
-		if (match) {
-			return match[1];
-		} else {
-			return null;
-		}
 	};
 }
